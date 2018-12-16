@@ -206,6 +206,7 @@ FbxMeshNode::~FbxMeshNode() {
 		sDELETE(Normals[i]);
 		sDELETE(UV[i]);
 	}
+	for (int i = 0; i < 255; i++)sDELETE(deformer[i]);
 }
 
 char *FbxMeshNode::getName() {
@@ -295,6 +296,26 @@ INT32 *FbxMeshNode::getUVindex(UINT layerIndex) {
 
 double *FbxMeshNode::getAlignedUV(UINT layerIndex) {
 	return UV[layerIndex]->AlignedUV;
+}
+
+UINT FbxMeshNode::getNumDeformer() {
+	return NumDeformer;
+}
+
+char *FbxMeshNode::getNameOfDeformer(UINT deformerIndex) {
+	return deformer[deformerIndex]->name;
+}
+
+int FbxMeshNode::getIndicesCountOfDeformer(UINT deformerIndex) {
+	return deformer[deformerIndex]->IndicesCount;
+}
+
+int *FbxMeshNode::getIndicesOfDeformer(UINT deformerIndex) {
+	return deformer[deformerIndex]->Indices;
+}
+
+double *FbxMeshNode::getWeightsOfDeformer(UINT deformerIndex) {
+	return deformer[deformerIndex]->Weights;
 }
 
 bool FbxLoader::fileCheck(FILE *fp) {
@@ -484,11 +505,60 @@ void FbxLoader::getLayerElement(NodeRecord *node, FbxMeshNode *mesh) {
 	}
 }
 
+void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
+	//各Deformer情報取得
+	if (!strcmp(node->className, "Deformer")) {
+		mesh->deformer[mesh->NumDeformer] = new Deformer();
+		Deformer *defo = mesh->deformer[mesh->NumDeformer];
+		//Deformer名
+		int len = strlen(node->nodeName[0]);
+		defo->name = new char[len + 1];
+		strcpy_s(defo->name, len + 1, node->nodeName[0]);
+
+		for (UINT i = 0; i < node->NumChildren; i++) {
+			NodeRecord *n1 = &node->nodeChildren[i];
+
+			//インデックス配列,数
+			if (!strcmp(n1->className, "Indexes")) {
+				UCHAR *output = nullptr;
+				UINT outSize = 0;
+				Decompress(n1, &output, &outSize, sizeof(INT32));
+				defo->IndicesCount = outSize;
+				defo->Indices = new INT32[outSize];
+				ConvertUCHARtoINT32(output, defo->Indices, outSize);
+				aDELETE(output);
+			}
+
+			//ウエイト
+			if (!strcmp(n1->className, "Weights")) {
+				UCHAR *output = nullptr;
+				UINT outSize = 0;
+				Decompress(n1, &output, &outSize, sizeof(double));
+				defo->Weights = new double[outSize];
+				ConvertUCHARtoDouble(output, defo->Weights, outSize);
+				aDELETE(output);
+			}
+		}
+		mesh->NumDeformer++;//Deformer数カウント
+	}
+}
+
+void FbxLoader::getDeformer(NodeRecord *node, FbxMeshNode *mesh) {
+	if (!strcmp(node->className, "Deformer")) {
+		for (UINT i = 0; i < node->NumConnectionNode; i++) {
+			NodeRecord *n1 = node->connectionNode[i];
+			//各Deformer情報取得
+			getSubDeformer(n1, mesh);
+		}
+	}
+}
+
 void FbxLoader::getGeometry(NodeRecord *node, FbxMeshNode *mesh) {
 	if (!strcmp(node->className, "Geometry")) {
 		for (UINT i = 0; i < node->NumChildren; i++) {
 			NodeRecord *n1 = &node->nodeChildren[i];
 
+			//頂点
 			if (!strcmp(n1->className, "Vertices") && mesh->vertices == nullptr) {
 				UCHAR *output = nullptr;
 				UINT outSize = 0;
@@ -499,6 +569,7 @@ void FbxLoader::getGeometry(NodeRecord *node, FbxMeshNode *mesh) {
 				aDELETE(output);
 			}
 
+			//頂点インデックス
 			if (!strcmp(n1->className, "PolygonVertexIndex") && mesh->polygonVertices == nullptr) {
 				UCHAR *output = nullptr;
 				UINT outSize = 0;
@@ -527,8 +598,15 @@ void FbxLoader::getGeometry(NodeRecord *node, FbxMeshNode *mesh) {
 				}
 			}
 
+			//Normal, UV
 			getLayerElement(n1, mesh);
+		}
 
+		for (UINT i = 0; i < node->NumConnectionNode; i++) {
+			NodeRecord *n1 = node->connectionNode[i];
+
+			//ボーン関連
+			getDeformer(n1, mesh);
 		}
 	}
 }

@@ -123,6 +123,23 @@ private:
 	}
 };
 
+class Deformer {
+
+private:
+	friend FbxMeshNode;
+	friend FbxLoader;
+	char *name = nullptr;
+	int IndicesCount = 0;//このボーンに影響を受ける頂点インデックス数
+	int *Indices = nullptr;//このボーンに影響を受ける頂点のインデックス配列
+	double *Weights = nullptr;//このボーンに影響を受ける頂点のウエイト配列
+
+	~Deformer() {
+		aDELETE(name);
+		aDELETE(Indices);
+		aDELETE(Weights);
+	}
+};
+
 class FbxMeshNode {
 
 private:
@@ -138,29 +155,37 @@ private:
 	LayerElement *Material[5] = { nullptr };
 	LayerElement *Normals[5] = { nullptr };
 	LayerElement *UV[5] = { nullptr };
+	UINT NumDeformer = 0;
+	Deformer *deformer[100] = { nullptr };
 
 public:
 	~FbxMeshNode();
 	char *getName();
+
 	//頂点
 	UINT getNumVertices();
 	double *getVertices();
+
 	//頂点インデックス
 	UINT getNumPolygonVertices();
 	INT32 *getPolygonVertices();
+
 	//ポリゴン
 	UINT getNumPolygon();
 	UINT getPolygonSize(UINT pind);
 	UINT getNumMaterial();
+
 	//Material
 	char *getMaterialName(UINT layerIndex = 0);
 	char *getMaterialMappingInformationType(UINT layerIndex = 0);
 	INT32 getMaterialNoOfPolygon(UINT polygonNo, UINT layerIndex = 0);
+
 	//Normal
 	UINT getNumNormal(UINT layerIndex = 0);
 	char *getNormalName(UINT layerIndex = 0);
 	char *getNormalMappingInformationType(UINT layerIndex = 0);
 	double *getNormal(UINT layerIndex = 0);
+
 	//UV
 	UINT getNumUV(UINT layerIndex = 0);
 	char *getUVName(UINT layerIndex = 0);
@@ -169,6 +194,13 @@ public:
 	UINT getNumUVindex(UINT layerIndex = 0);
 	INT32 *getUVindex(UINT layerIndex = 0);
 	double *getAlignedUV(UINT layerIndex = 0);
+
+	//Deformer
+	UINT getNumDeformer();
+	char *getNameOfDeformer(UINT deformerIndex);
+	int getIndicesCountOfDeformer(UINT deformerIndex);
+	int *getIndicesOfDeformer(UINT deformerIndex);
+	double *getWeightsOfDeformer(UINT deformerIndex);
 };
 
 class FbxLoader {
@@ -190,6 +222,8 @@ private:
 	void Decompress(NodeRecord *node, UCHAR **output, UINT *outSize, UINT typeSize);
 	void getLayerElementSub(NodeRecord *node, LayerElement *le);
 	void getLayerElement(NodeRecord *node, FbxMeshNode *mesh);
+	void getSubDeformer(NodeRecord *node, FbxMeshNode *mesh);
+	void getDeformer(NodeRecord *node, FbxMeshNode *mesh);
 	void getGeometry(NodeRecord *node, FbxMeshNode *mesh);
 	void getMesh();
 	void ConvertUCHARtoDouble(UCHAR *arr, double *outArr, UINT outsize);

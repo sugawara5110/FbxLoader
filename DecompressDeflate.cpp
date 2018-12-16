@@ -329,7 +329,7 @@ void DecompressDeflate::DecompressHuffman(UINT64 *curSearchBit, UCHAR *byteArray
 					UINT16 outExpansionBit = 0;
 					getBit(curSearchBit, byteArray, bitlen, &outExpansionBit, true);//拡張ビット読み込み,数値なのでリトルエンディアン
 					MatchLen += outExpansionBit;//拡張ビット有った場合, 一致長に足す
-												//距離値処理
+					//距離値処理
 					for (UINT destVal = 0; destVal < 30; destVal++) {
 						UINT16 lenBin = 0;
 						getBit(curSearchBit, byteArray, lenNumSign[destVal], &lenBin, false);
