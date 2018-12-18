@@ -203,18 +203,41 @@ public:
 	double *getWeightsOfDeformer(UINT deformerIndex);
 };
 
+class TransformMatrix {
+
+private:
+	friend FbxLoader;
+	struct Matrix {
+		double m[16] = { 0 };
+	};
+	char *name = nullptr;
+	Matrix TransformLinkMatrix;
+	UINT NumTransform = 0;
+	Matrix *EvaluateGlobalTransform = nullptr;
+
+public:
+	~TransformMatrix() {
+		aDELETE(name);
+		aDELETE(EvaluateGlobalTransform);
+	}
+	char *getName() { return name; }
+	double getTransformLinkMatrix(UINT y, UINT x) { return TransformLinkMatrix.m[y * 4 + x]; }
+};
+
 class FbxLoader {
 
 private:
 	friend NodeRecord;
 	UINT version = 0;//23から26バイトまで4バイト分符号なし整数,リトルエンディアン(下から読む)
-	NodeRecord FbxRecord;
+	NodeRecord FbxRecord;//ファイルそのまま
 	NodeRecord *rootNode = nullptr;//ConnectionID:0のポインタ
+	NodeRecord *Skeleton = nullptr;//Deformer最上位ノードポインタ
 	DecompressDeflate dd;
 	std::vector<ConnectionNo> cnNo;
 	std::vector<ConnectionList> cnLi;
 	UINT NumMesh = 0;
-	FbxMeshNode *mesh = nullptr;
+	FbxMeshNode *Mesh = nullptr;
+	TransformMatrix *Transform[100] = { nullptr };
 
 	bool fileCheck(FILE *fp);
 	void searchVersion(FILE *fp);
@@ -226,6 +249,8 @@ private:
 	void getDeformer(NodeRecord *node, FbxMeshNode *mesh);
 	void getGeometry(NodeRecord *node, FbxMeshNode *mesh);
 	void getMesh();
+	void getMatrix(NodeRecord *node, TransformMatrix *mat);
+	void getTransform();
 	void ConvertUCHARtoDouble(UCHAR *arr, double *outArr, UINT outsize);
 	void ConvertUCHARtoINT32(UCHAR *arr, INT32 *outArr, UINT outsize);
 	void drawname(NodeRecord *node, bool cnNode);
@@ -236,7 +261,8 @@ public:
 	NodeRecord *getFbxRecord();
 	NodeRecord *getRootNode();
 	UINT getNumFbxMeshNode();
-	FbxMeshNode **getFbxMeshNode();
+	FbxMeshNode *getFbxMeshNode(UINT index);
+	TransformMatrix *getTransformMatrix(UINT index);
 	int getVersion();
 	void drawRecord();
 	void drawNode();

@@ -206,7 +206,7 @@ FbxMeshNode::~FbxMeshNode() {
 		sDELETE(Normals[i]);
 		sDELETE(UV[i]);
 	}
-	for (int i = 0; i < 255; i++)sDELETE(deformer[i]);
+	for (int i = 0; i < 100; i++)sDELETE(deformer[i]);
 }
 
 char *FbxMeshNode::getName() {
@@ -297,7 +297,7 @@ INT32 *FbxMeshNode::getUVindex(UINT layerIndex) {
 double *FbxMeshNode::getAlignedUV(UINT layerIndex) {
 	return UV[layerIndex]->AlignedUV;
 }
-
+//Deformer
 UINT FbxMeshNode::getNumDeformer() {
 	return NumDeformer;
 }
@@ -545,6 +545,7 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 
 void FbxLoader::getDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 	if (!strcmp(node->className, "Deformer")) {
+		if (!Skeleton)Skeleton = node;
 		for (UINT i = 0; i < node->NumConnectionNode; i++) {
 			NodeRecord *n1 = node->connectionNode[i];
 			//äeDeformerèÓïÒéÊìæ
@@ -555,6 +556,9 @@ void FbxLoader::getDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 
 void FbxLoader::getGeometry(NodeRecord *node, FbxMeshNode *mesh) {
 	if (!strcmp(node->className, "Geometry")) {
+		int len = strlen(node->nodeName[0]);
+		mesh->name = new char[len + 1];
+		strcpy_s(mesh->name, len + 1, node->nodeName[0]);
 		for (UINT i = 0; i < node->NumChildren; i++) {
 			NodeRecord *n1 = &node->nodeChildren[i];
 
@@ -618,27 +622,24 @@ void FbxLoader::getMesh() {
 			NumMesh++;
 		}
 	}
-	mesh = new FbxMeshNode[NumMesh];
+	Mesh = new FbxMeshNode[NumMesh];
 
 	UINT cnt = 0;
 	for (UINT i = 0; i < rootNode->NumConnectionNode; i++) {
 		NodeRecord *n1 = rootNode->connectionNode[i];
 		if (!strcmp(n1->className, "Model") &&
 			!strcmp(n1->nodeName[1], "Mesh")) {
-			int len = strlen(n1->nodeName[0]);
-			mesh[cnt].name = new char[len + 1];
-			strcpy_s(mesh[cnt].name, len + 1, n1->nodeName[0]);
 			for (UINT i1 = 0; i1 < n1->NumConnectionNode; i1++) {
 				NodeRecord *n2 = n1->connectionNode[i1];
-				getGeometry(n2, &mesh[cnt]);
+				getGeometry(n2, &Mesh[cnt]);
 			}
 			cnt++;
 		}
 	}
 	//UVêÆóÒ
 	for (UINT i = 0; i < NumMesh; i++) {
-		for (INT32 i1 = 0; i1 < mesh[i].NumMaterial; i1++) {
-			LayerElement *uv = mesh[i].UV[i1];
+		for (INT32 i1 = 0; i1 < Mesh[i].NumMaterial; i1++) {
+			LayerElement *uv = Mesh[i].UV[i1];
 			uv->AlignedUV = new double[uv->NumUVindex * 2];
 			UINT cnt = 0;
 			for (UINT i2 = 0; i2 < uv->NumUVindex; i2++) {
@@ -646,6 +647,42 @@ void FbxLoader::getMesh() {
 				uv->AlignedUV[cnt++] = uv->UV[uv->UVindex[i2] * 2 + 1];
 			}
 		}
+	}
+}
+
+void FbxLoader::getMatrix(NodeRecord *node, TransformMatrix *mat) {
+	if (!strcmp(node->className, "Deformer")) {
+		//TransformMatrixñº
+		int len = strlen(node->nodeName[0]);
+		mat->name = new char[len + 1];
+		strcpy_s(mat->name, len + 1, node->nodeName[0]);
+
+		for (UINT i = 0; i < node->NumChildren; i++) {
+			NodeRecord *n1 = &node->nodeChildren[i];
+
+			//TransformLink
+			if (!strcmp(n1->className, "TransformLink")) {
+				UCHAR *output = nullptr;
+				UINT outSize = 0;
+				Decompress(n1, &output, &outSize, sizeof(double));
+				ConvertUCHARtoDouble(output, mat->TransformLinkMatrix.m, outSize);
+				aDELETE(output);
+			}
+		}
+	}
+}
+
+void FbxLoader::getTransform() {
+	if (Skeleton) {
+		for (UINT me = 0; me < Mesh[0].NumDeformer; me++)Transform[me] = new TransformMatrix();
+		for (UINT i = 0; i < Skeleton->NumConnectionNode; i++) {
+			NodeRecord *n1 = Skeleton->connectionNode[i];
+			//äeMatrixèÓïÒéÊìæ
+			getMatrix(n1, Transform[i]);
+		}
+	}
+	else {
+
 	}
 }
 
@@ -700,10 +737,12 @@ void FbxLoader::drawname(NodeRecord *node, bool cnNode) {
 }
 
 FbxLoader::~FbxLoader() {
-	aDELETE(mesh);
+	aDELETE(Mesh);
+	for (int i = 0; i < 100; i++)sDELETE(Transform[i]);
 	std::vector<ConnectionNo>().swap(cnNo);//âï˙
 	std::vector<ConnectionList>().swap(cnLi);//âï˙
 	rootNode = nullptr;
+	Skeleton = nullptr;
 }
 
 bool FbxLoader::setFbxFile(char *pass) {
@@ -718,6 +757,7 @@ bool FbxLoader::setFbxFile(char *pass) {
 	readFBX(fp);
 	fclose(fp);
 	getMesh();
+	getTransform();
 	return true;
 }
 
@@ -733,8 +773,12 @@ UINT FbxLoader::getNumFbxMeshNode() {
 	return NumMesh;
 }
 
-FbxMeshNode **FbxLoader::getFbxMeshNode() {
-	return &mesh;
+FbxMeshNode *FbxLoader::getFbxMeshNode(UINT index) {
+	return &Mesh[index];
+}
+
+TransformMatrix *FbxLoader::getTransformMatrix(UINT index) {
+	return Transform[index];
 }
 
 int FbxLoader::getVersion() {
