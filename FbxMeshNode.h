@@ -8,12 +8,14 @@
 #define Class_FbxMeshNode_Header
 
 #include <windows.h>
+#include <stdint.h>
 
 #define sDELETE(p) if(p){delete p;      p=nullptr;}
 #define aDELETE(p) if(p){delete[] p;    p=nullptr;}
 
 class FbxLoader;
 class FbxMeshNode;
+class Deformer;
 
 class LayerElement {
 
@@ -43,6 +45,25 @@ private:
 	}
 };
 
+class AnimationCurve {
+
+private:
+	friend Deformer;
+	friend FbxLoader;
+	double Lcl = 0;
+	UINT NumKey = 0;
+	double Default = 0.0;
+	bool def = false;
+	int64_t *KeyTime = nullptr;
+	float *KeyValueFloat = nullptr;
+
+	~AnimationCurve() {
+		aDELETE(KeyTime);
+		aDELETE(KeyValueFloat);
+	}
+	float getKeyValue(double time);
+};
+
 class Deformer {
 
 private:
@@ -52,8 +73,22 @@ private:
 	int IndicesCount = 0;//このボーンに影響を受ける頂点インデックス数
 	int *Indices = nullptr;//このボーンに影響を受ける頂点のインデックス配列
 	double *Weights = nullptr;//このボーンに影響を受ける頂点のウエイト配列
-	double TransformLinkMatrix[16];
-	double Pose[16];
+	double TransformLinkMatrix[16] = { 0 };//初期姿勢行列
+	double Pose[16] = { 0 };//姿勢行列(使わないかも)
+	float outPose[16] = { 0 };//出力用
+
+	AnimationCurve Translation[3];
+	AnimationCurve Rotation[3];
+	AnimationCurve Scaling[3];
+
+	void MatrixScaling(float mat[16], float sx, float sy, float sz);
+	void MatrixRotationX(float mat[16], float theta);
+	void MatrixRotationY(float mat[16], float theta);
+	void MatrixRotationZ(float mat[16], float theta);
+	void MatrixTranslation(float mat[16], float movx, float movy, float movz);
+	void MatrixMultiply(float outmat[16], float mat1[16], float mat2[16]);
+	float CalDetMat4x4(float mat[16]);
+	void MatrixInverse(float outmat[16], float mat[16]);
 
 public:
 	~Deformer() {
@@ -66,7 +101,9 @@ public:
 	int *getIndices();
 	double *getWeights();
 	double getTransformLinkMatrix(UINT y, UINT x);
-	double getEvaluateGlobalTransform(UINT y, UINT x, double time);
+	void EvaluateLocalTransform(double time);
+	void EvaluateGlobalTransform(double time);
+	double getEvaluateTransform(UINT y, UINT x);
 };
 
 class FbxMeshNode {

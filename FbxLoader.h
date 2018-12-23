@@ -19,6 +19,7 @@ UINT convertUCHARtoUINT(UCHAR *arr);
 INT32 convertUCHARtoINT32(UCHAR *arr);
 int64_t convertUCHARtoint64(UCHAR *arr);
 UINT64 convertUCHARtoUINT64(UCHAR *arr);
+double convertUCHARtoDouble(UCHAR *arr);
 
 class FbxLoader;
 class FbxMeshNode;
@@ -118,11 +119,15 @@ private:
 	void getDeformer(NodeRecord *node, FbxMeshNode *mesh);
 	void getGeometry(NodeRecord *node, FbxMeshNode *mesh);
 	void getMesh();
-	void getPoseSub2(NodeRecord *node);
-	void getPoseSub(NodeRecord *node);
+	void getLcl(NodeRecord *pro70Child, AnimationCurve anim[3], char *LclStr);
+	void getAnimationCurve(NodeRecord *animNode, AnimationCurve anim[3], char *Lcl);
+	void getPoseSub2(int64_t cnId, NodeRecord *node, FbxMeshNode *mesh);
+	void getPoseSub(NodeRecord *node, FbxMeshNode *mesh);
 	void getPose();
 	void ConvertUCHARtoDouble(UCHAR *arr, double *outArr, UINT outsize);
 	void ConvertUCHARtoINT32(UCHAR *arr, INT32 *outArr, UINT outsize);
+	void ConvertUCHARtoint64_t(UCHAR *arr, int64_t *outArr, UINT outsize);
+	void ConvertUCHARtofloat(UCHAR *arr, float *outArr, UINT outsize);
 	void drawname(NodeRecord *node, bool cnNode);
 
 public:

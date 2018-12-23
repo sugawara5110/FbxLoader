@@ -41,6 +41,16 @@ UINT64 convertUCHARtoUINT64(UCHAR *arr) {
 		((UINT64)arr[1] << 8) | ((UINT64)arr[0]);
 }
 
+double convertUCHARtoDouble(UCHAR *arr) {
+	UINT64 tmp = ((UINT64)arr[7] << 56) | ((UINT64)arr[6] << 48) |
+		((UINT64)arr[5] << 40) | ((UINT64)arr[4] << 32) |
+		((UINT64)arr[3] << 24) | ((UINT64)arr[2] << 16) |
+		((UINT64)arr[1] << 8) | ((UINT64)arr[0]);
+	//byte列そのままで型変換する
+	double *dp = reinterpret_cast<double*>(&tmp);
+	return *dp;
+}
+
 void NodeRecord::searchName_Type(std::vector<ConnectionNo>& cn) {
 	int swt = 0;
 	UINT ln = 0;
@@ -537,30 +547,150 @@ void FbxLoader::getMesh() {
 	}
 }
 
-void FbxLoader::getPoseSub2(NodeRecord *node) {
-	//接続先探索
-	int64_t cnId = convertUCHARtoint64(&node->Property[1]);
-	NodeRecord *cn = nullptr;
-	for (int i = 0; i < cnNo.size(); i++) {
-		if (cnNo.data()[i].ConnectionID == cnId) {//取り出した接続先IDからポインタを割り出し
-			cn = cnNo.data()[i].ConnectionIDPointer;
-			break;
+void FbxLoader::getLcl(NodeRecord *pro70Child, AnimationCurve anim[3], char *LclStr) {
+	if (!strcmp(pro70Child->className, "P") &&
+		!strcmp(pro70Child->nodeName[0], LclStr)) {
+		UINT proInd = 1;
+		for (UINT i = 0; i < 4; i++) {
+			proInd += convertUCHARtoUINT(&pro70Child->Property[proInd]) + 1 + 4;
 		}
-	}
-	
-	for (UINT i = 0; i < cn->NumConnectionNode; i++) {
-		
-
+		for (UINT i = 0; i < 3; i++) {
+			ConvertUCHARtoDouble(&pro70Child->Property[proInd], &anim[i].Lcl, 1);
+			proInd += 9;
+		}
 	}
 }
 
-void FbxLoader::getPoseSub(NodeRecord *node) {
+void FbxLoader::getAnimationCurve(NodeRecord *animNode, AnimationCurve anim[3], char *Lcl) {
+	UINT animInd = 0;
+	if (!strcmp(animNode->className, "AnimationCurveNode") &&
+		!strcmp(animNode->nodeName[0], Lcl)) {
+		for (UINT i = 0; i < animNode->NumConnectionNode; i++) {
+			if (!strcmp(animNode->connectionNode[i]->className, "AnimationCurve")) {
+				NodeRecord *animCurve = animNode->connectionNode[i];
+				for (UINT i1 = 0; i1 < animCurve->NumChildren; i1++) {
+					if (!strcmp(animCurve->nodeChildren[i1].className, "Default")) {
+						if (anim[animInd].def)continue;
+						anim[animInd].Default = convertUCHARtoDouble(&animCurve->nodeChildren[i1].Property[1]);
+						anim[animInd].def = true;
+					}
+					if (!strcmp(animCurve->nodeChildren[i1].className, "KeyTime")) {
+						if (anim[animInd].KeyTime)continue;
+						UCHAR *output = nullptr;
+						UINT outSize = 0;
+						Decompress(&animCurve->nodeChildren[i1], &output, &outSize, sizeof(int64_t));
+						anim[animInd].NumKey = outSize;
+						anim[animInd].KeyTime = new int64_t[outSize];
+						ConvertUCHARtoint64_t(output, anim[animInd].KeyTime, outSize);
+						aDELETE(output);
+					}
+					if (!strcmp(animCurve->nodeChildren[i1].className, "KeyValueFloat")) {
+						if (anim[animInd].KeyValueFloat)continue;
+						UCHAR *output = nullptr;
+						UINT outSize = 0;
+						Decompress(&animCurve->nodeChildren[i1], &output, &outSize, sizeof(float));
+						anim[animInd].NumKey = outSize;
+						anim[animInd].KeyValueFloat = new float[outSize];
+						ConvertUCHARtofloat(output, anim[animInd].KeyValueFloat, outSize);
+						aDELETE(output);
+						animInd++;
+					}
+				}
+			}
+		}
+	}
+}
+
+void FbxLoader::getPoseSub2(int64_t cnId, NodeRecord *node, FbxMeshNode *mesh) {
+	//接続先探索
+	NodeRecord *model = nullptr;
+	for (int i = 0; i < cnNo.size(); i++) {
+		if (cnNo.data()[i].ConnectionID == cnId) {//取り出した接続先IDからポインタを割り出し(ModelのID)
+			model = cnNo.data()[i].ConnectionIDPointer;
+			break;
+		}
+	}
+
+	char *linkName = model->nodeName[0];//この名前から, 対応ボーンを割り出す
+	UINT Numdefo = mesh->NumDeformer;
+
+	for (UINT i = 0; i < Numdefo; i++) {
+		Deformer *defo = mesh->deformer[i];
+		char *deName = defo->name;
+		//名前文字列に空白文字が有る場合,空白文字以前を取り除く
+		char *linkNameTmp = linkName;
+		do {
+			while (*linkNameTmp != ' ' && *linkNameTmp != '\0') {
+				linkNameTmp++;
+			}
+			if (*linkNameTmp == '\0') {
+				break;
+			}
+			else {
+				linkNameTmp++;
+				linkName = linkNameTmp;
+			}
+		} while (1);
+
+		char *deNameTmp = deName;
+		do {
+			while (*deNameTmp != ' ' && *deNameTmp != '\0') {
+				deNameTmp++;
+			}
+			if (*deNameTmp == '\0') {
+				break;
+			}
+			else {
+				deNameTmp++;
+				deName = deNameTmp;
+			}
+		} while (1);
+
+		//名前が一致してる場合はそのDeformerにPose行列を格納する
+		int llen = strlen(linkName);
+		int dlen = strlen(deName);
+		if (llen == dlen && !strcmp(linkName, deName)) {
+			//一致したのでPose行列格納
+			for (UINT i1 = 0; i1 < node->NumChildren; i1++) {
+				if (!strcmp(node->nodeChildren[i1].className, "Matrix")) {
+					UCHAR *output = nullptr;
+					UINT outSize = 0;
+					Decompress(&node->nodeChildren[i1], &output, &outSize, sizeof(double));
+					ConvertUCHARtoDouble(output, defo->Pose, outSize);
+					aDELETE(output);
+					//Lcl Translation, Lcl Rotation, Lcl Scaling取得
+					for (UINT i2 = 0; i2 < model->NumChildren; i2++) {
+						if (!strcmp(model->nodeChildren[i2].className, "Properties70")) {
+							NodeRecord *pro70 = &model->nodeChildren[i2];
+							for (UINT i3 = 0; i3 < pro70->NumChildren; i3++) {
+								getLcl(&pro70->nodeChildren[i3], defo->Translation, "Lcl Translation");
+								getLcl(&pro70->nodeChildren[i3], defo->Rotation, "Lcl Rotation");
+								getLcl(&pro70->nodeChildren[i3], defo->Scaling, "Lcl Scaling");
+							}
+						}
+					}
+					//Animation関連
+					for (UINT i2 = 0; i2 < model->NumConnectionNode; i2++) {
+						getAnimationCurve(model->connectionNode[i2], defo->Translation, "T");
+						getAnimationCurve(model->connectionNode[i2], defo->Rotation, "R");
+						getAnimationCurve(model->connectionNode[i2], defo->Scaling, "S");
+					}
+					return;
+				}
+			}
+		}
+	}
+}
+
+void FbxLoader::getPoseSub(NodeRecord *node, FbxMeshNode *mesh) {
 	for (UINT i = 0; i < node->NumChildren; i++) {
 		if (!strcmp(node->nodeChildren[i].className, "PoseNode")) {
 			NodeRecord *n1 = &node->nodeChildren[i];
 			for (UINT i2 = 0; i2 < n1->NumChildren; i2++) {
 				if (!strcmp(n1->nodeChildren[i2].className, "Node")) {
-					getPoseSub2(&n1->nodeChildren[i2]);
+					int64_t cnId = convertUCHARtoint64(&n1->nodeChildren[i2].Property[1]);
+					getPoseSub2(cnId, &node->nodeChildren[i], mesh);//PoseNodeを渡す
+					break;
 				}
 			}
 		}
@@ -572,10 +702,12 @@ void FbxLoader::getPose() {
 		if (!strcmp(FbxRecord.nodeChildren[i].className, "Objects")) {
 			NodeRecord *n1 = &FbxRecord.nodeChildren[i];
 			for (UINT i2 = 0; i2 < n1->NumChildren; i2++) {
-				if (!strcmp(n1->nodeChildren[i2].className, "Pose")) {//1個だけ使う
-					getPoseSub(&n1->nodeChildren[i2]);
+				UINT mcnt = 0;
+				if (!strcmp(n1->nodeChildren[i2].className, "Pose")) {//Poseの数とMeshの数が同じと仮定・・
+					getPoseSub(&n1->nodeChildren[i2], &Mesh[mcnt++]);
 				}
 			}
+			break;
 		}
 	}
 }
@@ -598,6 +730,27 @@ void FbxLoader::ConvertUCHARtoINT32(UCHAR *arr, INT32 *outArr, UINT outsize) {
 		int addInd = i * 4;
 		outArr[i] = (((INT32)arr[3 + addInd] << 24) | ((INT32)arr[2 + addInd] << 16) |
 			((INT32)arr[1 + addInd] << 8) | ((INT32)arr[addInd]));
+	}
+}
+
+void FbxLoader::ConvertUCHARtoint64_t(UCHAR *arr, int64_t *outArr, UINT outsize) {
+	for (UINT i = 0; i < outsize; i++) {
+		int addInd = i * 8;
+		outArr[i] = (((int64_t)arr[7 + addInd] << 56) | ((int64_t)arr[6 + addInd] << 48) |
+			((int64_t)arr[5 + addInd] << 40) | ((int64_t)arr[4 + addInd]) << 32 |
+			((int64_t)arr[3 + addInd] << 24) | ((int64_t)arr[2 + addInd] << 16) |
+			((int64_t)arr[1 + addInd] << 8) | ((int64_t)arr[addInd]));
+	}
+}
+
+void FbxLoader::ConvertUCHARtofloat(UCHAR *arr, float *outArr, UINT outsize) {
+	for (UINT i = 0; i < outsize; i++) {
+		int addInd = i * 4;
+		UINT32 tmp = (((UINT32)arr[3 + addInd] << 24) | ((UINT32)arr[2 + addInd] << 16) |
+			((UINT32)arr[1 + addInd] << 8) | ((UINT32)arr[addInd]));
+		//byte列そのままで型変換する
+		float *fp = reinterpret_cast<float*>(&tmp);
+		outArr[i] = *fp;
 	}
 }
 
