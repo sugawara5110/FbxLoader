@@ -115,6 +115,8 @@ private:
 	void Decompress(NodeRecord *node, UCHAR **output, UINT *outSize, UINT typeSize);
 	void getLayerElementSub(NodeRecord *node, LayerElement *le);
 	void getLayerElement(NodeRecord *node, FbxMeshNode *mesh);
+	bool nameComparison(char *name1, char *name2);
+	void setParentPointerOfSubDeformer(FbxMeshNode *mesh);
 	void getSubDeformer(NodeRecord *node, FbxMeshNode *mesh);
 	void getDeformer(NodeRecord *node, FbxMeshNode *mesh);
 	void getGeometry(NodeRecord *node, FbxMeshNode *mesh);

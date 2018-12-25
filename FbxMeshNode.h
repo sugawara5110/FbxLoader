@@ -61,7 +61,7 @@ private:
 		aDELETE(KeyTime);
 		aDELETE(KeyValueFloat);
 	}
-	float getKeyValue(double time);
+	double getKeyValue(double time);
 };
 
 class Deformer {
@@ -69,32 +69,42 @@ class Deformer {
 private:
 	friend FbxMeshNode;
 	friend FbxLoader;
-	char *name = nullptr;
+	//ツリー情報
+	char *name = nullptr;//自身の名前
+	UINT NumChild = 0;
+	char *childName[100] = { nullptr };//子DeformerName
+	Deformer *parentNode = nullptr;//EvaluateGlobalTransformの計算に使う
+
 	int IndicesCount = 0;//このボーンに影響を受ける頂点インデックス数
 	int *Indices = nullptr;//このボーンに影響を受ける頂点のインデックス配列
 	double *Weights = nullptr;//このボーンに影響を受ける頂点のウエイト配列
-	double TransformLinkMatrix[16] = { 0 };//初期姿勢行列
+	double TransformMatrix[16] = { 0 };//中心位置
+	double TransformLinkMatrix[16] = { 0 };//初期姿勢行列(絶対位置)
 	double Pose[16] = { 0 };//姿勢行列(使わないかも)
-	float outPose[16] = { 0 };//出力用
+	double LocalPose[16] = { 0 };
+	double GlobalPose[16] = { 0 };
 
 	AnimationCurve Translation[3];
 	AnimationCurve Rotation[3];
 	AnimationCurve Scaling[3];
 
-	void MatrixScaling(float mat[16], float sx, float sy, float sz);
-	void MatrixRotationX(float mat[16], float theta);
-	void MatrixRotationY(float mat[16], float theta);
-	void MatrixRotationZ(float mat[16], float theta);
-	void MatrixTranslation(float mat[16], float movx, float movy, float movz);
-	void MatrixMultiply(float outmat[16], float mat1[16], float mat2[16]);
-	float CalDetMat4x4(float mat[16]);
-	void MatrixInverse(float outmat[16], float mat[16]);
+	void MatrixScaling(double mat[16], double sx, double sy, double sz);
+	void MatrixRotationX(double mat[16], double theta);
+	void MatrixRotationY(double mat[16], double theta);
+	void MatrixRotationZ(double mat[16], double theta);
+	void MatrixTranslation(double mat[16], double movx, double movy, double movz);
+	void MatrixMultiply(double outmat[16], double mat1[16], double mat2[16]);
+	double CalDetMat4x4(double mat[16]);
+	void MatrixInverse(double outmat[16], double mat[16]);
+	void VectorMatrixMultiply(double inoutvec[3], double mat[16]);
+	double *SubEvaluateGlobalTransform(double time);
 
 public:
 	~Deformer() {
 		aDELETE(name);
 		aDELETE(Indices);
 		aDELETE(Weights);
+		for (int i = 0; i < 100; i++)aDELETE(childName[i]);
 	}
 	char *getName();
 	int getIndicesCount();
@@ -103,7 +113,8 @@ public:
 	double getTransformLinkMatrix(UINT y, UINT x);
 	void EvaluateLocalTransform(double time);
 	void EvaluateGlobalTransform(double time);
-	double getEvaluateTransform(UINT y, UINT x);
+	double getEvaluateLocalTransform(UINT y, UINT x);
+	double getEvaluateGlobalTransform(UINT y, UINT x);
 };
 
 class FbxMeshNode {

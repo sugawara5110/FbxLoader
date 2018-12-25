@@ -393,6 +393,57 @@ void FbxLoader::getLayerElement(NodeRecord *node, FbxMeshNode *mesh) {
 	}
 }
 
+bool FbxLoader::nameComparison(char *name1, char *name2) {
+	//名前文字列に空白文字が有る場合,空白文字以前を取り除く
+	char *name1Tmp = name1;
+	do {
+		while (*name1Tmp != ' ' && *name1Tmp != '\0') {
+			name1Tmp++;
+		}
+		if (*name1Tmp == '\0') {
+			break;
+		}
+		else {
+			name1Tmp++;
+			name1 = name1Tmp;
+		}
+	} while (1);
+
+	char *name2Tmp = name2;
+	do {
+		while (*name2Tmp != ' ' && *name2Tmp != '\0') {
+			name2Tmp++;
+		}
+		if (*name2Tmp == '\0') {
+			break;
+		}
+		else {
+			name2Tmp++;
+			name2 = name2Tmp;
+		}
+	} while (1);
+
+	//名前が一致してるか
+	int len1 = strlen(name1);
+	int len2 = strlen(name2);
+	if (len1 == len2 && !strcmp(name1, name2))return true;
+	return false;
+}
+
+void FbxLoader::setParentPointerOfSubDeformer(FbxMeshNode *mesh) {
+	for (UINT i = 0; i < mesh->NumDeformer; i++) {
+		Deformer *defo = mesh->deformer[i];
+		for (UINT i1 = 0; i1 < defo->NumChild; i1++) {
+			for (UINT i2 = 0; i2 < mesh->NumDeformer; i2++) {
+				//登録した子Deformer名と一致するDeformerに自身のポインタを登録
+				if (nameComparison(defo->childName[i1], mesh->deformer[i2]->name)) {
+					mesh->deformer[i2]->parentNode = defo;
+				}
+			}
+		}
+	}
+}
+
 void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 	//各Deformer情報取得
 	if (!strcmp(node->className, "Deformer")) {
@@ -402,6 +453,21 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 		int len = strlen(node->nodeName[0]);
 		defo->name = new char[len + 1];
 		strcpy_s(defo->name, len + 1, node->nodeName[0]);
+
+		//子ノードName登録
+		for (UINT i = 0; i < node->NumConnectionNode; i++) {
+			NodeRecord *n1 = node->connectionNode[i];
+			if (!strcmp(n1->className, "Model")) {//自身のModel
+				for (UINT i1 = 0; i1 < n1->NumConnectionNode; i1++) {
+					NodeRecord *n2 = n1->connectionNode[i1];
+					if (!strcmp(n2->className, "Model")) {//子ノードのModel
+						int ln = strlen(n2->nodeName[0]);
+						defo->childName[defo->NumChild] = new char[ln + 1];
+						strcpy_s(defo->childName[defo->NumChild++], ln + 1, n2->nodeName[0]);
+					}
+				}
+			}
+		}
 
 		for (UINT i = 0; i < node->NumChildren; i++) {
 			NodeRecord *n1 = &node->nodeChildren[i];
@@ -424,6 +490,15 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 				Decompress(n1, &output, &outSize, sizeof(double));
 				defo->Weights = new double[outSize];
 				ConvertUCHARtoDouble(output, defo->Weights, outSize);
+				aDELETE(output);
+			}
+
+			//Transform
+			if (!strcmp(n1->className, "Transform")) {
+				UCHAR *output = nullptr;
+				UINT outSize = 0;
+				Decompress(n1, &output, &outSize, sizeof(double));
+				ConvertUCHARtoDouble(output, defo->TransformMatrix, outSize);
 				aDELETE(output);
 			}
 
@@ -544,6 +619,7 @@ void FbxLoader::getMesh() {
 				uv->AlignedUV[cnt++] = uv->UV[uv->UVindex[i2] * 2 + 1];
 			}
 		}
+		setParentPointerOfSubDeformer(&Mesh[i]);
 	}
 }
 
