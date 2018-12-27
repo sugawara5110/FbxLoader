@@ -7,9 +7,9 @@
 #include "FbxMeshNode.h"
 #include <math.h>
 
-double AnimationCurve::getKeyValue(double time) {
+double AnimationCurve::getKeyValue(int64_t time) {
 	UINT ind = 0;
-	int64_t ti = (int64_t)time;
+	int64_t ti = time;
 	if (NumKey <= 1)return (double)KeyValueFloat[0];
 	for (ind = 1; ind < NumKey; ind++) {
 		if (KeyTime[ind] > ti)break;//tiがKeyTime[ind]未満, KeyTime[ind-1]以上
@@ -154,7 +154,15 @@ double Deformer::getTransformLinkMatrix(UINT y, UINT x) {
 	return TransformLinkMatrix[y * 4 + x];
 }
 
-void Deformer::EvaluateLocalTransform(double time) {
+int64_t Deformer::getTimeFRAMES60(int frame) {
+	return frame * 769769300ll;
+}
+
+int64_t Deformer::getTimeFRAMES30(int frame) {
+	return frame * 1539538600ll;
+}
+
+void Deformer::EvaluateLocalTransform(int64_t time) {
 	double sca[16] = { 0 };
 	MatrixScaling(sca, Scaling[0].getKeyValue(time), Scaling[1].getKeyValue(time), Scaling[2].getKeyValue(time));
 	double rotx[16] = { 0 };
@@ -176,20 +184,22 @@ void Deformer::EvaluateLocalTransform(double time) {
 	MatrixMultiply(LocalPose, scrot, mov);
 }
 
-double *Deformer::SubEvaluateGlobalTransform(double time) {
+double *Deformer::SubEvaluateGlobalTransform(int64_t time) {
 	EvaluateLocalTransform(time);
 	if (parentNode) {
+		//ルートノード以外
 		double *GlobalPosePare = parentNode->SubEvaluateGlobalTransform(time);
 		MatrixMultiply(GlobalPose, LocalPose, GlobalPosePare);
 		return GlobalPose;
 	}
+	//ルートノード
 	double inv[16] = { 0 };
-	MatrixInverse(inv, TransformLinkMatrix);
+	MatrixInverse(inv, Pose);
 	MatrixMultiply(GlobalPose, inv, LocalPose);
 	return GlobalPose;
 }
 
-void Deformer::EvaluateGlobalTransform(double time) {
+void Deformer::EvaluateGlobalTransform(int64_t time) {
 	SubEvaluateGlobalTransform(time);
 }
 
@@ -212,6 +222,7 @@ FbxMeshNode::~FbxMeshNode() {
 		sDELETE(UV[i]);
 	}
 	for (int i = 0; i < 100; i++)sDELETE(deformer[i]);
+	sDELETE(rootDeformer);
 }
 
 char *FbxMeshNode::getName() {

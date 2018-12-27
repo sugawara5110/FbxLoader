@@ -431,8 +431,13 @@ bool FbxLoader::nameComparison(char *name1, char *name2) {
 }
 
 void FbxLoader::setParentPointerOfSubDeformer(FbxMeshNode *mesh) {
-	for (UINT i = 0; i < mesh->NumDeformer; i++) {
-		Deformer *defo = mesh->deformer[i];
+	for (UINT i = 0; i < mesh->NumDeformer + 1; i++) {
+		Deformer *defo = nullptr;
+		if (i < mesh->NumDeformer)
+			defo = mesh->deformer[i];
+		else
+			defo = mesh->rootDeformer;
+
 		for (UINT i1 = 0; i1 < defo->NumChild; i1++) {
 			for (UINT i2 = 0; i2 < mesh->NumDeformer; i2++) {
 				//“o˜^‚µ‚½qDeformer–¼‚Æˆê’v‚·‚éDeformer‚É©g‚Ìƒ|ƒCƒ“ƒ^‚ğ“o˜^
@@ -608,6 +613,32 @@ void FbxLoader::getMesh() {
 			cnt++;
 		}
 	}
+
+	//rootBone¶¬, name“o˜^(–{—ˆDeformer‚¶‚á‚È‚¢‚Ì‚Å•Ê‚É¶¬)
+	cnt = 0;
+	for (UINT i = 0; i < rootNode->NumConnectionNode; i++) {
+		NodeRecord *n1 = rootNode->connectionNode[i];
+		if (!strcmp(n1->className, "Model") && n1->nodeName[1]) {
+			if (!strcmp(n1->nodeName[1], "Root") || !strcmp(n1->nodeName[1], "Limb")) {
+				Mesh[cnt].rootDeformer = new Deformer();
+				Deformer *defo = Mesh[cnt].rootDeformer;
+				int len = strlen(n1->nodeName[0]);
+				defo->name = new char[len + 1];
+				strcpy_s(defo->name, len + 1, n1->nodeName[0]);
+				//qƒm[ƒh‚ÌModelName“o˜^
+				for (UINT i1 = 0; i1 < n1->NumConnectionNode; i1++) {
+					NodeRecord *n2 = n1->connectionNode[i1];
+					if (!strcmp(n2->className, "Model")) {
+						int ln = strlen(n2->nodeName[0]);
+						defo->childName[defo->NumChild] = new char[ln + 1];
+						strcpy_s(defo->childName[defo->NumChild++], ln + 1, n2->nodeName[0]);
+					}
+				}
+				cnt++;
+			}
+		}
+	}
+
 	//UV®—ñ
 	for (UINT i = 0; i < NumMesh; i++) {
 		for (INT32 i1 = 0; i1 < Mesh[i].NumMaterial; i1++) {
@@ -690,42 +721,16 @@ void FbxLoader::getPoseSub2(int64_t cnId, NodeRecord *node, FbxMeshNode *mesh) {
 	char *linkName = model->nodeName[0];//‚±‚Ì–¼‘O‚©‚ç, ‘Î‰ƒ{[ƒ“‚ğŠ„‚èo‚·
 	UINT Numdefo = mesh->NumDeformer;
 
-	for (UINT i = 0; i < Numdefo; i++) {
-		Deformer *defo = mesh->deformer[i];
+	for (UINT i = 0; i < Numdefo + 1; i++) {
+		Deformer *defo = nullptr;
+		if (i < Numdefo)
+			defo = mesh->deformer[i];
+		else
+			defo = mesh->rootDeformer;
+
 		char *deName = defo->name;
-		//–¼‘O•¶š—ñ‚É‹ó”’•¶š‚ª—L‚éê‡,‹ó”’•¶šˆÈ‘O‚ğæ‚èœ‚­
-		char *linkNameTmp = linkName;
-		do {
-			while (*linkNameTmp != ' ' && *linkNameTmp != '\0') {
-				linkNameTmp++;
-			}
-			if (*linkNameTmp == '\0') {
-				break;
-			}
-			else {
-				linkNameTmp++;
-				linkName = linkNameTmp;
-			}
-		} while (1);
 
-		char *deNameTmp = deName;
-		do {
-			while (*deNameTmp != ' ' && *deNameTmp != '\0') {
-				deNameTmp++;
-			}
-			if (*deNameTmp == '\0') {
-				break;
-			}
-			else {
-				deNameTmp++;
-				deName = deNameTmp;
-			}
-		} while (1);
-
-		//–¼‘O‚ªˆê’v‚µ‚Ä‚éê‡‚Í‚»‚ÌDeformer‚ÉPoses—ñ‚ğŠi”[‚·‚é
-		int llen = strlen(linkName);
-		int dlen = strlen(deName);
-		if (llen == dlen && !strcmp(linkName, deName)) {
+		if (nameComparison(linkName, deName)) {
 			//ˆê’v‚µ‚½‚Ì‚ÅPoses—ñŠi”[
 			for (UINT i1 = 0; i1 < node->NumChildren; i1++) {
 				if (!strcmp(node->nodeChildren[i1].className, "Matrix")) {

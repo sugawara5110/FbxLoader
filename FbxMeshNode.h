@@ -61,7 +61,7 @@ private:
 		aDELETE(KeyTime);
 		aDELETE(KeyValueFloat);
 	}
-	double getKeyValue(double time);
+	double getKeyValue(int64_t time);
 };
 
 class Deformer {
@@ -97,7 +97,7 @@ private:
 	double CalDetMat4x4(double mat[16]);
 	void MatrixInverse(double outmat[16], double mat[16]);
 	void VectorMatrixMultiply(double inoutvec[3], double mat[16]);
-	double *SubEvaluateGlobalTransform(double time);
+	double *SubEvaluateGlobalTransform(int64_t time);
 
 public:
 	~Deformer() {
@@ -111,8 +111,10 @@ public:
 	int *getIndices();
 	double *getWeights();
 	double getTransformLinkMatrix(UINT y, UINT x);
-	void EvaluateLocalTransform(double time);
-	void EvaluateGlobalTransform(double time);
+	int64_t getTimeFRAMES60(int frame);
+	int64_t getTimeFRAMES30(int frame);
+	void EvaluateLocalTransform(int64_t time);
+	void EvaluateGlobalTransform(int64_t time);
 	double getEvaluateLocalTransform(UINT y, UINT x);
 	double getEvaluateGlobalTransform(UINT y, UINT x);
 };
@@ -134,6 +136,7 @@ private:
 	LayerElement *UV[5] = { nullptr };
 	UINT NumDeformer = 0;
 	Deformer *deformer[100] = { nullptr };
+	Deformer *rootDeformer = nullptr;
 
 public:
 	~FbxMeshNode();
