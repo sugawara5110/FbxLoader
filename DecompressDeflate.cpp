@@ -354,6 +354,20 @@ void DecompressDeflate::DecompressHuffman(UINT64 *curSearchBit, UCHAR *byteArray
 	}
 }
 
+void DecompressDeflate::Uncompress(UINT64 *curSearchBit, UCHAR *byteArray, UINT *outIndex, UCHAR *outArray) {
+	while ((*curSearchBit) % byteArrayNumbit != 0) { (*curSearchBit)++; }//次のbyte境界までdata無しなので飛ばす
+	UINT16 LEN = 0;//2byte NLENの後から続くdataのbyte数
+	getBit(curSearchBit, byteArray, 16, &LEN, true);
+	UINT16 NLEN = 0;//2byte LENの1の補数
+	getBit(curSearchBit, byteArray, 16, &NLEN, true);
+	//ここからデータ
+	for (UINT16 i = 0; i < LEN; i++) {
+		UINT16 val = 0;
+		getBit(curSearchBit, byteArray, 8, &val, true);
+		outArray[(*outIndex)++] = val;
+	}
+}
+
 UINT16 DecompressDeflate::blockFinal(UINT64 *curSearchBit, UCHAR *byteArray) {
 	UINT16 bf = 0;
 	getBit(curSearchBit, byteArray, 1, &bf, true);
@@ -376,7 +390,7 @@ void DecompressDeflate::getDecompressArray(UCHAR *bA, UINT size, UCHAR *outArray
 		UINT16 sw = blockType(&curSearchBit, bA);
 		switch (sw) {
 		case 0:
-			MessageBoxA(0, "非圧縮は対応してません", 0, MB_OK);
+			Uncompress(&curSearchBit, bA, &outIndex, outArray);
 			break;
 		case 1:
 			createFixedHuffmanSign();
@@ -388,6 +402,7 @@ void DecompressDeflate::getDecompressArray(UCHAR *bA, UINT size, UCHAR *outArray
 			MessageBoxA(0, "ブロックタイプエラー", 0, MB_OK);
 			break;
 		}
-		DecompressHuffman(&curSearchBit, bA, &outIndex, outArray);
+		if (sw == 1 || sw == 2)
+			DecompressHuffman(&curSearchBit, bA, &outIndex, outArray);
 	}
 }

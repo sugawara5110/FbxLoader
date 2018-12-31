@@ -10,6 +10,7 @@
 double AnimationCurve::getKeyValue(int64_t time) {
 	UINT ind = 0;
 	int64_t ti = time;
+	if (!KeyValueFloat)return 0.0;
 	if (NumKey <= 1)return (double)KeyValueFloat[0];
 	for (ind = 1; ind < NumKey; ind++) {
 		if (KeyTime[ind] > ti)break;//tiがKeyTime[ind]未満, KeyTime[ind-1]以上
@@ -193,10 +194,7 @@ double *Deformer::SubEvaluateGlobalTransform(int64_t time) {
 		return GlobalPose;
 	}
 	//ルートノード
-	double inv[16] = { 0 };
-	MatrixInverse(inv, Pose);
-	MatrixMultiply(GlobalPose, inv, LocalPose);
-	return GlobalPose;
+	return LocalPose;
 }
 
 void Deformer::EvaluateGlobalTransform(int64_t time) {
@@ -217,6 +215,7 @@ FbxMeshNode::~FbxMeshNode() {
 	aDELETE(polygonVertices);
 	aDELETE(PolygonSize);
 	for (int i = 0; i < 5; i++) {
+		sDELETE(material[i]);
 		sDELETE(Material[i]);
 		sDELETE(Normals[i]);
 		sDELETE(UV[i]);
@@ -258,7 +257,7 @@ UINT FbxMeshNode::getNumMaterial() {
 }
 //Material
 char *FbxMeshNode::getMaterialName(UINT layerIndex) {
-	return Material[layerIndex]->name;
+	return material[layerIndex]->MaterialName;
 }
 
 char *FbxMeshNode::getMaterialMappingInformationType(UINT layerIndex) {
@@ -269,6 +268,27 @@ INT32 FbxMeshNode::getMaterialNoOfPolygon(UINT polygonNo, UINT layerIndex) {
 	if (Material[layerIndex]->Nummaterialarr <= polygonNo)return 0;
 	return Material[layerIndex]->materials[polygonNo];
 }
+
+char *FbxMeshNode::getDiffuseTextureName(UINT Index) {
+	return material[Index]->textureDifName;
+}
+
+char *FbxMeshNode::getNormalTextureName(UINT Index) {
+	return material[Index]->textureNorName;
+}
+
+double FbxMeshNode::getDiffuseColor(UINT Index, UINT ColIndex) {
+	return material[Index]->Diffuse[ColIndex];
+}
+
+double FbxMeshNode::getSpecularColor(UINT Index, UINT ColIndex) {
+	return material[Index]->Specular[ColIndex];
+}
+
+double FbxMeshNode::getAmbientColor(UINT Index, UINT ColIndex) {
+	return material[Index]->Ambient[ColIndex];
+}
+
 //Normal
 UINT FbxMeshNode::getNumNormal(UINT layerIndex) {
 	return Normals[layerIndex]->Numnormals;

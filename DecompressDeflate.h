@@ -9,13 +9,13 @@
 
 #include <windows.h>
 #define a_DELETE(p) if(p){delete[] p;    p=nullptr;}
+#define byteArrayNumbit 8
 
 class DecompressDeflate {
 
 private:
 	static const UINT16 dest[];
 	static const UCHAR NumBit[];
-	const UCHAR byteArrayNumbit = 8;
 	UINT16 strSign[286] = { 0 };
 	UCHAR strNumSign[286] = { 0 };
 	UINT16 lenSign[30] = { 0 };
@@ -31,6 +31,7 @@ private:
 	void CreateSign(UINT16 *clens, UCHAR *hclens, UINT16 *SortedIndex, UINT size);
 	void createCustomHuffmanSign(UINT64 *curSearchBit, UCHAR *byteArray);
 	void DecompressHuffman(UINT64 *curSearchBit, UCHAR *byteArray, UINT *outIndex, UCHAR *outArray);
+	void Uncompress(UINT64 *curSearchBit, UCHAR *byteArray, UINT *outIndex, UCHAR *outArray);
 	UINT16 blockFinal(UINT64 *curSearchBit, UCHAR *byteArray);
 	UINT16 blockType(UINT64 *curSearchBit, UCHAR *byteArray);
 

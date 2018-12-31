@@ -80,7 +80,6 @@ private:
 	double *Weights = nullptr;//このボーンに影響を受ける頂点のウエイト配列
 	double TransformMatrix[16] = { 0 };//中心位置
 	double TransformLinkMatrix[16] = { 0 };//初期姿勢行列(絶対位置)
-	double Pose[16] = { 0 };//姿勢行列(使わないかも)
 	double LocalPose[16] = { 0 };
 	double GlobalPose[16] = { 0 };
 
@@ -119,6 +118,26 @@ public:
 	double getEvaluateGlobalTransform(UINT y, UINT x);
 };
 
+class FbxMaterialNode {
+
+private:
+	friend FbxMeshNode;
+	friend FbxLoader;
+	double Diffuse[3] = { 0 };
+	double Specular[3] = { 0 };
+	double Ambient[3] = { 0 };
+	char *MaterialName = nullptr;
+	char *textureDifName = nullptr;
+	char *textureNorName = nullptr;
+
+public:
+	~FbxMaterialNode() {
+		aDELETE(MaterialName);
+		aDELETE(textureDifName);
+		aDELETE(textureNorName);
+	}
+};
+
 class FbxMeshNode {
 
 private:
@@ -130,7 +149,8 @@ private:
 	UINT NumPolygonVertices = 0;//頂点インデックス数
 	UINT NumPolygon = 0;//ポリゴン数
 	UINT *PolygonSize = nullptr;//各ポリゴン頂点インデックス数
-	INT32 NumMaterial = 0;
+	INT32 NumMaterial = 0;//マテリアル数
+	FbxMaterialNode *material[5] = { nullptr };
 	LayerElement *Material[5] = { nullptr };
 	LayerElement *Normals[5] = { nullptr };
 	LayerElement *UV[5] = { nullptr };
@@ -159,6 +179,11 @@ public:
 	char *getMaterialName(UINT layerIndex = 0);
 	char *getMaterialMappingInformationType(UINT layerIndex = 0);
 	INT32 getMaterialNoOfPolygon(UINT polygonNo, UINT layerIndex = 0);
+	char *getDiffuseTextureName(UINT Index);
+	char *getNormalTextureName(UINT Index);
+	double getDiffuseColor(UINT Index, UINT ColIndex);
+	double getSpecularColor(UINT Index, UINT ColIndex);
+	double getAmbientColor(UINT Index, UINT ColIndex);
 
 	//Normal
 	UINT getNumNormal(UINT layerIndex = 0);

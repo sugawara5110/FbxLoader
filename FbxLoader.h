@@ -102,17 +102,20 @@ private:
 	UINT version = 0;//23から26バイトまで4バイト分符号なし整数,リトルエンディアン(下から読む)
 	NodeRecord FbxRecord;//ファイルそのまま
 	NodeRecord *rootNode = nullptr;//ConnectionID:0のポインタ
-	NodeRecord *Skeleton = nullptr;//Deformer最上位ノードポインタ
 	DecompressDeflate dd;
 	std::vector<ConnectionNo> cnNo;
 	std::vector<ConnectionList> cnLi;
 	UINT NumMesh = 0;
 	FbxMeshNode *Mesh = nullptr;
+	UINT NumDeformer = 0;
+	Deformer *deformer[100] = { nullptr };//デフォーマーのみのファイル対応
+	Deformer *rootDeformer = nullptr;
+	bool skeleton = false;//二個目以降のメッシュからアニメーション情報が取れない？現状1個目のみから取得可
 
 	bool fileCheck(FILE *fp);
 	void searchVersion(FILE *fp);
 	void readFBX(FILE *fp);
-	void Decompress(NodeRecord *node, UCHAR **output, UINT *outSize, UINT typeSize);
+	bool Decompress(NodeRecord *node, UCHAR **output, UINT *outSize, UINT typeSize);
 	void getLayerElementSub(NodeRecord *node, LayerElement *le);
 	void getLayerElement(NodeRecord *node, FbxMeshNode *mesh);
 	bool nameComparison(char *name1, char *name2);
@@ -120,12 +123,15 @@ private:
 	void getSubDeformer(NodeRecord *node, FbxMeshNode *mesh);
 	void getDeformer(NodeRecord *node, FbxMeshNode *mesh);
 	void getGeometry(NodeRecord *node, FbxMeshNode *mesh);
+	void getMaterial(NodeRecord *node, FbxMeshNode *mesh, UINT *materialIndex);
 	void getMesh();
+	void setParentPointerOfNoneMeshSubDeformer();
+	void getNoneMeshSubDeformer(NodeRecord *node);
+	void getNoneMeshDeformer();
+	void getCol(NodeRecord *pro70Child, double Col[3], char *ColStr);
 	void getLcl(NodeRecord *pro70Child, AnimationCurve anim[3], char *LclStr);
 	void getAnimationCurve(NodeRecord *animNode, AnimationCurve anim[3], char *Lcl);
-	void getPoseSub2(int64_t cnId, NodeRecord *node, FbxMeshNode *mesh);
-	void getPoseSub(NodeRecord *node, FbxMeshNode *mesh);
-	void getPose();
+	void getAnimation(NodeRecord *model, Deformer *defo);
 	void ConvertUCHARtoDouble(UCHAR *arr, double *outArr, UINT outsize);
 	void ConvertUCHARtoINT32(UCHAR *arr, INT32 *outArr, UINT outsize);
 	void ConvertUCHARtoint64_t(UCHAR *arr, int64_t *outArr, UINT outsize);
@@ -139,6 +145,8 @@ public:
 	NodeRecord *getRootNode();
 	UINT getNumFbxMeshNode();
 	FbxMeshNode *getFbxMeshNode(UINT index);
+	UINT getNumNoneMeshDeformer();
+	Deformer *getNoneMeshDeformer(UINT index);
 	int getVersion();
 	void drawRecord();
 	void drawNode();
