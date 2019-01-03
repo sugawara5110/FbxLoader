@@ -86,8 +86,7 @@ private:
 	NodeRecord *nodeChildren = nullptr;//{}内のノード, NodeRecord実体配列用
 
 	int64_t thisConnectionID = -1;
-	UINT NumConnectionNode = 0;
-	NodeRecord *connectionNode[100] = { nullptr };//NodeRecordポインタ配列用
+	std::vector<NodeRecord*> connectionNode;//NodeRecordポインタ配列用
 
 	void searchName_Type(std::vector<ConnectionNo>& cn);
 	void createConnectionList(std::vector<ConnectionList>& cnLi);
@@ -108,7 +107,7 @@ private:
 	UINT NumMesh = 0;
 	FbxMeshNode *Mesh = nullptr;
 	UINT NumDeformer = 0;
-	Deformer *deformer[100] = { nullptr };//デフォーマーのみのファイル対応
+	Deformer *deformer[256] = { nullptr };//デフォーマーのみのファイル対応
 	Deformer *rootDeformer = nullptr;
 	bool skeleton = false;//二個目以降のメッシュからアニメーション情報が取れない？現状1個目のみから取得可
 

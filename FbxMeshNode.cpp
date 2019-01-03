@@ -220,7 +220,7 @@ FbxMeshNode::~FbxMeshNode() {
 		sDELETE(Normals[i]);
 		sDELETE(UV[i]);
 	}
-	for (int i = 0; i < 100; i++)sDELETE(deformer[i]);
+	for (UINT i = 0; i < NumDeformer; i++)sDELETE(deformer[i]);
 	sDELETE(rootDeformer);
 }
 

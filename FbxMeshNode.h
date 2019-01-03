@@ -155,7 +155,7 @@ private:
 	LayerElement *Normals[5] = { nullptr };
 	LayerElement *UV[5] = { nullptr };
 	UINT NumDeformer = 0;
-	Deformer *deformer[100] = { nullptr };
+	Deformer *deformer[256] = { nullptr };
 	Deformer *rootDeformer = nullptr;
 
 public:
