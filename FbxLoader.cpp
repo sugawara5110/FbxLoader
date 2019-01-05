@@ -7,6 +7,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "FbxLoader.h"
 #include "iostream"
+#include "DecompressDeflate.h"
 #define Kaydata_FBX_binary 18
 
 UINT convertBYTEtoUINT(FILE *fp) {
@@ -179,7 +180,7 @@ void NodeRecord::set(FILE *fp, std::vector<ConnectionNo>& cn, std::vector<Connec
 		UINT childEndOffset = 0;
 		//子ノードEndOffsetをたどり,個数カウント
 		do {
-			fseek(fp, sizeof(char) * -4, SEEK_CUR);//"convertBYTEtoUINT(fp) != 0"の分戻す
+			fseek(fp, (long)(sizeof(char) * -4), SEEK_CUR);//"convertBYTEtoUINT(fp) != 0"の分戻す
 			NumChildren++;
 			childEndOffset = convertBYTEtoUINT(fp);
 			fseek(fp, sizeof(char) * childEndOffset, SEEK_SET);
@@ -243,12 +244,12 @@ void FbxLoader::readFBX(FILE *fp) {
 	UINT endoffset = 0;
 
 	while (convertBYTEtoUINT(fp) != 0) {
-		fseek(fp, sizeof(char) * -4, SEEK_CUR);//"convertBYTEtoUINT(fp) != 0"の分戻す
+		fseek(fp, (long)(sizeof(char) * -4), SEEK_CUR);//"convertBYTEtoUINT(fp) != 0"の分戻す
 		nodeCount++;
 		endoffset = convertBYTEtoUINT(fp);
 		fseek(fp, sizeof(char) * endoffset, SEEK_SET);
 	}
-	fseek(fp, sizeof(char) * curpos, SEEK_SET);
+	fseek(fp, (long)(sizeof(char) * curpos), SEEK_SET);
 
 	FbxRecord.classNameLen = 9;
 	FbxRecord.className = new char[FbxRecord.classNameLen + 1];
@@ -296,7 +297,11 @@ bool FbxLoader::Decompress(NodeRecord *node, UCHAR **output, UINT *outSize, UINT
 	*outSize = convertUCHARtoUINT(&node->Property[1]);
 	*output = new UCHAR[(*outSize) * typeSize];
 	if (comp == 1) {
-		dd.getDecompressArray(&node->Property[15], inSize, *output);//解凍
+		UCHAR *propertyData = new UCHAR[inSize];
+		memcpy(propertyData, &node->Property[15], inSize);
+		DecompressDeflate dd;
+		dd.getDecompressArray(propertyData, inSize, *output);//解凍
+		a_DELETE(propertyData);
 	}
 	else {
 		memcpy(*output, &node->Property[13], (*outSize) * typeSize);//解凍無しの場合メタdata2byte無し
@@ -460,12 +465,10 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 		defo->name = new char[len + 1];
 		strcpy_s(defo->name, len + 1, node->nodeName[0]);
 
-		if (!skeleton) {
-			for (UINT i = 0; i < node->connectionNode.size(); i++) {
-				NodeRecord *n1 = node->connectionNode.data()[i];
-				if (!strcmp(n1->className, "Model")) {//自身のModel
-					getAnimation(n1, defo);
-				}
+		for (UINT i = 0; i < node->connectionNode.size(); i++) {
+			NodeRecord *n1 = node->connectionNode.data()[i];
+			if (!strcmp(n1->className, "Model")) {//自身のModel
+				getAnimation(n1, defo);
 			}
 		}
 
@@ -537,7 +540,6 @@ void FbxLoader::getDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 			//各Deformer情報取得
 			getSubDeformer(n1, mesh);
 		}
-		skeleton = true;
 	}
 }
 

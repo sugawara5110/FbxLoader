@@ -9,7 +9,6 @@
 
 #include <stdio.h>
 #include <vector>
-#include "DecompressDeflate.h"
 #include "FbxMeshNode.h"
 
 #define NUMNODENAME 10
@@ -101,7 +100,6 @@ private:
 	UINT version = 0;//23から26バイトまで4バイト分符号なし整数,リトルエンディアン(下から読む)
 	NodeRecord FbxRecord;//ファイルそのまま
 	NodeRecord *rootNode = nullptr;//ConnectionID:0のポインタ
-	DecompressDeflate dd;
 	std::vector<ConnectionNo> cnNo;
 	std::vector<ConnectionList> cnLi;
 	UINT NumMesh = 0;
@@ -109,7 +107,6 @@ private:
 	UINT NumDeformer = 0;
 	Deformer *deformer[256] = { nullptr };//デフォーマーのみのファイル対応
 	Deformer *rootDeformer = nullptr;
-	bool skeleton = false;//二個目以降のメッシュからアニメーション情報が取れない？現状1個目のみから取得可
 
 	bool fileCheck(FILE *fp);
 	void searchVersion(FILE *fp);

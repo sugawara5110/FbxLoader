@@ -71,7 +71,7 @@ void DecompressDeflate::DecompressLZSS(UCHAR *outArray, UINT *outIndex, UINT16 M
 
 void DecompressDeflate::getBit(UINT64 *curSearchBit, UCHAR *byteArray, UCHAR NumBit, UINT16 *outBinArr, bool firstRight) {
 	for (UCHAR i = 0; i < NumBit; i++) {
-		UINT baind = *curSearchBit / byteArrayNumbit;//配列インデックス
+		UINT baind = (UINT)(*curSearchBit / byteArrayNumbit);//配列インデックス
 		UINT searBit = *curSearchBit % byteArrayNumbit;//要素内bit位置インデックス
 		UCHAR NumShift = byteArrayNumbit - 1 - searBit;
 		UCHAR popbit = (byteArray[baind] >> NumShift) & 0x01;//目的bit取り出し, bit位置最右
@@ -109,7 +109,7 @@ void DecompressDeflate::createFixedHuffmanSign() {
 }
 
 void DecompressDeflate::SortIndex(UINT16 *sortedIndex, UCHAR *hclens, UINT size) {
-	UINT topSize = size * 0.5f;
+	UINT topSize = (UINT)(size * 0.5);
 	UINT halfSize = size - topSize;
 	UINT16 *topSortedIndex = new UINT16[topSize];
 	UINT16 *halfSortedIndex = new UINT16[halfSize];
@@ -231,7 +231,7 @@ void DecompressDeflate::createCustomHuffmanSign(UINT64 *curSearchBit, UCHAR *byt
 	firstIndex--;
 	UINT16 prevBit = 0;
 	UINT sigLenInd = 0;
-	while (sigLenInd < strSigLen + destSigLen) {
+	while (sigLenInd < (UINT)(strSigLen + destSigLen)) {
 		for (UINT i1 = firstIndex; i1 < NumSign; i1++) {//bit探索
 			UINT16 outBin = 0;
 			getBit(curSearchBit, byteArray, hclens[SortedIndex[i1]], &outBin, false);//符号を読み込む
@@ -240,7 +240,7 @@ void DecompressDeflate::createCustomHuffmanSign(UINT64 *curSearchBit, UCHAR *byt
 					//直前に取り出された符号長を3~6回繰り返す。16の後の2bit 00=3回 11=6回繰り返す
 					UINT16 obit = 0;
 					getBit(curSearchBit, byteArray, 2, &obit, true);//反復長を取り出す符号ではない為,通常順序
-					for (UINT16 i16 = 0; i16 < obit + 3; i16++)sigLenList[sigLenInd++] = prevBit;
+					for (UINT16 i16 = 0; i16 < obit + 3; i16++)sigLenList[sigLenInd++] = (UCHAR)prevBit;
 					break;
 				}
 				if (SortedIndex[i1] == 17) {
@@ -258,7 +258,7 @@ void DecompressDeflate::createCustomHuffmanSign(UINT64 *curSearchBit, UCHAR *byt
 					break;
 				}
 				//符号長の場合
-				sigLenList[sigLenInd++] = SortedIndex[i1];
+				sigLenList[sigLenInd++] = (UCHAR)SortedIndex[i1];
 				prevBit = SortedIndex[i1];
 				break;
 			}
@@ -364,7 +364,7 @@ void DecompressDeflate::Uncompress(UINT64 *curSearchBit, UCHAR *byteArray, UINT 
 	for (UINT16 i = 0; i < LEN; i++) {
 		UINT16 val = 0;
 		getBit(curSearchBit, byteArray, 8, &val, true);
-		outArray[(*outIndex)++] = val;
+		outArray[(*outIndex)++] = (UCHAR)val;
 	}
 }
 
