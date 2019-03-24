@@ -13,12 +13,12 @@
 
 #define NUMNODENAME 10
 
-UINT convertBYTEtoUINT(FILE *fp);
-UINT convertUCHARtoUINT(UCHAR *arr);
-INT32 convertUCHARtoINT32(UCHAR *arr);
-int64_t convertUCHARtoint64(UCHAR *arr);
-UINT64 convertUCHARtoUINT64(UCHAR *arr);
-double convertUCHARtoDouble(UCHAR *arr);
+unsigned int convertBYTEtoUINT(FILE *fp);
+unsigned int convertUCHARtoUINT(unsigned char *arr);
+int convertUCHARtoINT32(unsigned char *arr);
+int64_t convertUCHARtoint64(unsigned char *arr);
+unsigned long long convertUCHARtoUINT64(unsigned char *arr);
+double convertUCHARtoDouble(unsigned char *arr);
 
 class FbxLoader;
 class FbxMeshNode;
@@ -44,12 +44,12 @@ private:
 	friend FbxLoader;
 	friend FbxMeshNode;
 	//全てリトルエンディアン
-	UINT EndOffset = 0;//次のファイルの先頭バイト数
-	UINT NumProperties = 0;//プロパティの数
-	UINT PropertyListLen = 0;//プロパティリストの大きさ(byte)
-	UCHAR classNameLen = 0;
+	unsigned int EndOffset = 0;//次のファイルの先頭バイト数
+	unsigned int NumProperties = 0;//プロパティの数
+	unsigned int PropertyListLen = 0;//プロパティリストの大きさ(byte)
+	unsigned char classNameLen = 0;
 	char *className = nullptr;
-	UCHAR *Property = nullptr;//(型type, そのdataの順で並んでる) * プロパティの数
+	unsigned char *Property = nullptr;//(型type, そのdataの順で並んでる) * プロパティの数
 	//型type種類別のdata内容 (型typeは1byte)
 	//プリミティブ型
 	//Y:2byte 符号付き整数型
@@ -81,7 +81,7 @@ private:
 	//の順で並んでる
 
 	char *nodeName[NUMNODENAME] = { nullptr };
-	UINT NumChildren = 0;
+	unsigned int NumChildren = 0;
 	NodeRecord *nodeChildren = nullptr;//{}内のノード, NodeRecord実体配列用
 
 	int64_t thisConnectionID = -1;
@@ -97,21 +97,21 @@ class FbxLoader {
 
 private:
 	friend NodeRecord;
-	UINT version = 0;//23から26バイトまで4バイト分符号なし整数,リトルエンディアン(下から読む)
+	unsigned int version = 0;//23から26バイトまで4バイト分符号なし整数,リトルエンディアン(下から読む)
 	NodeRecord FbxRecord;//ファイルそのまま
 	NodeRecord *rootNode = nullptr;//ConnectionID:0のポインタ
 	std::vector<ConnectionNo> cnNo;
 	std::vector<ConnectionList> cnLi;
-	UINT NumMesh = 0;
+	unsigned int NumMesh = 0;
 	FbxMeshNode *Mesh = nullptr;
-	UINT NumDeformer = 0;
+	unsigned int NumDeformer = 0;
 	Deformer *deformer[256] = { nullptr };//デフォーマーのみのファイル対応
 	Deformer *rootDeformer = nullptr;
 
 	bool fileCheck(FILE *fp);
 	void searchVersion(FILE *fp);
 	void readFBX(FILE *fp);
-	bool Decompress(NodeRecord *node, UCHAR **output, UINT *outSize, UINT typeSize);
+	bool Decompress(NodeRecord *node, unsigned char **output, unsigned int *outSize, unsigned int typeSize);
 	void getLayerElementSub(NodeRecord *node, LayerElement *le);
 	void getLayerElement(NodeRecord *node, FbxMeshNode *mesh);
 	bool nameComparison(char *name1, char *name2);
@@ -119,7 +119,7 @@ private:
 	void getSubDeformer(NodeRecord *node, FbxMeshNode *mesh);
 	void getDeformer(NodeRecord *node, FbxMeshNode *mesh);
 	void getGeometry(NodeRecord *node, FbxMeshNode *mesh);
-	void getMaterial(NodeRecord *node, FbxMeshNode *mesh, UINT *materialIndex);
+	void getMaterial(NodeRecord *node, FbxMeshNode *mesh, unsigned int *materialIndex);
 	void getMesh();
 	void setParentPointerOfNoneMeshSubDeformer();
 	void getNoneMeshSubDeformer(NodeRecord *node);
@@ -128,10 +128,10 @@ private:
 	void getLcl(NodeRecord *pro70Child, AnimationCurve anim[3], char *LclStr);
 	void getAnimationCurve(NodeRecord *animNode, AnimationCurve anim[3], char *Lcl);
 	void getAnimation(NodeRecord *model, Deformer *defo);
-	void ConvertUCHARtoDouble(UCHAR *arr, double *outArr, UINT outsize);
-	void ConvertUCHARtoINT32(UCHAR *arr, INT32 *outArr, UINT outsize);
-	void ConvertUCHARtoint64_t(UCHAR *arr, int64_t *outArr, UINT outsize);
-	void ConvertUCHARtofloat(UCHAR *arr, float *outArr, UINT outsize);
+	void ConvertUCHARtoDouble(unsigned char *arr, double *outArr, unsigned int outsize);
+	void ConvertUCHARtoINT32(unsigned char *arr, int *outArr, unsigned int outsize);
+	void ConvertUCHARtoint64_t(unsigned char *arr, int64_t *outArr, unsigned int outsize);
+	void ConvertUCHARtofloat(unsigned char *arr, float *outArr, unsigned int outsize);
 	void drawname(NodeRecord *node, bool cnNode);
 
 public:
@@ -139,10 +139,10 @@ public:
 	bool setFbxFile(char *pass);
 	NodeRecord *getFbxRecord();
 	NodeRecord *getRootNode();
-	UINT getNumFbxMeshNode();
-	FbxMeshNode *getFbxMeshNode(UINT index);
-	UINT getNumNoneMeshDeformer();
-	Deformer *getNoneMeshDeformer(UINT index);
+	unsigned int getNumFbxMeshNode();
+	FbxMeshNode *getFbxMeshNode(unsigned int index);
+	unsigned int getNumNoneMeshDeformer();
+	Deformer *getNoneMeshDeformer(unsigned int index);
 	int getVersion();
 	void drawRecord();
 	void drawNode();

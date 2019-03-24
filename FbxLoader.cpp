@@ -8,45 +8,45 @@
 #include "FbxLoader.h"
 #include "iostream"
 #include "DecompressDeflate.h"
-#define Kaydata_FBX_binary 18
+#define Kaydara_FBX_binary 18
 
-UINT convertBYTEtoUINT(FILE *fp) {
+unsigned int convertBYTEtoUINT(FILE *fp) {
 	char ver[4];
 	fread(ver, sizeof(char), 4, fp);
 
-	return ((UCHAR)ver[3] << 24) | ((UCHAR)ver[2] << 16) |
-		((UCHAR)ver[1] << 8) | ((UCHAR)ver[0]);
+	return ((unsigned char)ver[3] << 24) | ((unsigned char)ver[2] << 16) |
+		((unsigned char)ver[1] << 8) | ((unsigned char)ver[0]);
 }
 
-UINT convertUCHARtoUINT(UCHAR *arr) {
-	return ((UINT)arr[3] << 24) | ((UINT)arr[2] << 16) |
-		((UINT)arr[1] << 8) | ((UINT)arr[0]);
+unsigned int convertUCHARtoUINT(unsigned char *arr) {
+	return ((unsigned int)arr[3] << 24) | ((unsigned int)arr[2] << 16) |
+		((unsigned int)arr[1] << 8) | ((unsigned int)arr[0]);
 }
 
-INT32 convertUCHARtoINT32(UCHAR *arr) {
-	return ((INT32)arr[3] << 24) | ((INT32)arr[2] << 16) |
-		((INT32)arr[1] << 8) | ((INT32)arr[0]);
+int convertUCHARtoINT32(unsigned char *arr) {
+	return ((int)arr[3] << 24) | ((int)arr[2] << 16) |
+		((int)arr[1] << 8) | ((int)arr[0]);
 }
 
-int64_t convertUCHARtoint64(UCHAR *arr) {
+int64_t convertUCHARtoint64(unsigned char *arr) {
 	return ((int64_t)arr[7] << 56) | ((int64_t)arr[6] << 48) |
 		((int64_t)arr[5] << 40) | ((int64_t)arr[4] << 32) |
 		((int64_t)arr[3] << 24) | ((int64_t)arr[2] << 16) |
 		((int64_t)arr[1] << 8) | ((int64_t)arr[0]);
 }
 
-UINT64 convertUCHARtoUINT64(UCHAR *arr) {
-	return ((UINT64)arr[7] << 56) | ((UINT64)arr[6] << 48) |
-		((UINT64)arr[5] << 40) | ((UINT64)arr[4] << 32) |
-		((UINT64)arr[3] << 24) | ((UINT64)arr[2] << 16) |
-		((UINT64)arr[1] << 8) | ((UINT64)arr[0]);
+unsigned long long convertUCHARtoUINT64(unsigned char *arr) {
+	return ((unsigned long long)arr[7] << 56) | ((unsigned long long)arr[6] << 48) |
+		((unsigned long long)arr[5] << 40) | ((unsigned long long)arr[4] << 32) |
+		((unsigned long long)arr[3] << 24) | ((unsigned long long)arr[2] << 16) |
+		((unsigned long long)arr[1] << 8) | ((unsigned long long)arr[0]);
 }
 
-double convertUCHARtoDouble(UCHAR *arr) {
-	UINT64 tmp = ((UINT64)arr[7] << 56) | ((UINT64)arr[6] << 48) |
-		((UINT64)arr[5] << 40) | ((UINT64)arr[4] << 32) |
-		((UINT64)arr[3] << 24) | ((UINT64)arr[2] << 16) |
-		((UINT64)arr[1] << 8) | ((UINT64)arr[0]);
+double convertUCHARtoDouble(unsigned char *arr) {
+	unsigned long long tmp = ((unsigned long long)arr[7] << 56) | ((unsigned long long)arr[6] << 48) |
+		((unsigned long long)arr[5] << 40) | ((unsigned long long)arr[4] << 32) |
+		((unsigned long long)arr[3] << 24) | ((unsigned long long)arr[2] << 16) |
+		((unsigned long long)arr[1] << 8) | ((unsigned long long)arr[0]);
 	//byte列そのままで型変換する
 	double *dp = reinterpret_cast<double*>(&tmp);
 	return *dp;
@@ -54,12 +54,12 @@ double convertUCHARtoDouble(UCHAR *arr) {
 
 void NodeRecord::searchName_Type(std::vector<ConnectionNo>& cn) {
 	int swt = 0;
-	UINT ln = 0;
+	unsigned int ln = 0;
 	int nameNo = 0;
 	int addInd = 0;
-	UCHAR *pr = nullptr;
-	UCHAR sw = 0;
-	for (UINT i = 0; i < PropertyListLen; i++) {
+	unsigned char *pr = nullptr;
+	unsigned char sw = 0;
+	for (unsigned int i = 0; i < PropertyListLen; i++) {
 		switch (swt) {
 		case 3:
 			//Lの処理
@@ -163,8 +163,8 @@ void NodeRecord::set(FILE *fp, std::vector<ConnectionNo>& cn, std::vector<Connec
 	fread(className, sizeof(char), classNameLen, fp);
 	className[classNameLen] = '\0';
 	if (PropertyListLen > 0) {
-		Property = new UCHAR[PropertyListLen];
-		fread(Property, sizeof(UCHAR), PropertyListLen, fp);
+		Property = new unsigned char[PropertyListLen];
+		fread(Property, sizeof(unsigned char), PropertyListLen, fp);
 		searchName_Type(cn);
 		if (!strcmp(className, "C") && (!strcmp(nodeName[0], "OO") || !strcmp(nodeName[0], "OP"))) {
 			createConnectionList(cnLi);
@@ -175,9 +175,9 @@ void NodeRecord::set(FILE *fp, std::vector<ConnectionNo>& cn, std::vector<Connec
 	fgetpos(fp, &curpos);
 	//現在のファイルポインタがEndOffsetより手前,かつ
 	//現ファイルポインタから4byteが全て0ではない場合, 子ノード有り
-	if (EndOffset > UINT(curpos) && convertBYTEtoUINT(fp) != 0) {
-		UINT topChildPointer = UINT(curpos);
-		UINT childEndOffset = 0;
+	if (EndOffset > unsigned int(curpos) && convertBYTEtoUINT(fp) != 0) {
+		unsigned int topChildPointer = unsigned int(curpos);
+		unsigned int childEndOffset = 0;
 		//子ノードEndOffsetをたどり,個数カウント
 		do {
 			fseek(fp, (long)(sizeof(char) * -4), SEEK_CUR);//"convertBYTEtoUINT(fp) != 0"の分戻す
@@ -188,7 +188,7 @@ void NodeRecord::set(FILE *fp, std::vector<ConnectionNo>& cn, std::vector<Connec
 		//カウントが終わったので最初の子ノードのファイルポインタに戻す
 		fseek(fp, sizeof(char) * topChildPointer, SEEK_SET);
 		nodeChildren = new NodeRecord[NumChildren];
-		for (UINT i = 0; i < NumChildren; i++) {
+		for (unsigned int i = 0; i < NumChildren; i++) {
 			nodeChildren[i].set(fp, cn, cnLi);
 		}
 	}
@@ -208,16 +208,15 @@ NodeRecord::~NodeRecord() {
 
 bool FbxLoader::fileCheck(FILE *fp) {
 
-	char *str2 = "Kaydata FBX binary";
+	char *str2 = "Kaydara FBX binary";
 
 	int missCnt = 0;
-	for (int i = 0; i < Kaydata_FBX_binary + 1; i++) {
+	for (int i = 0; i < Kaydara_FBX_binary + 1; i++) {
 		if ((char)fgetc(fp) != *str2) {
 			missCnt++;
 			if (missCnt > 3) {
 				//ソフトによってスペルミスが有るのでとりあえず3文字以上異なる場合falseにする
 				//別ファイルの場合ほぼ全数当てはまらないはず
-				MessageBoxA(0, "バイナリファイルではありません", 0, MB_OK);
 				return false;
 			}
 		}
@@ -240,8 +239,8 @@ void FbxLoader::readFBX(FILE *fp) {
 	fpos_t curpos = 0;
 	fgetpos(fp, &curpos);
 
-	UINT nodeCount = 0;
-	UINT endoffset = 0;
+	unsigned int nodeCount = 0;
+	unsigned int endoffset = 0;
 
 	while (convertBYTEtoUINT(fp) != 0) {
 		fseek(fp, (long)(sizeof(char) * -4), SEEK_CUR);//"convertBYTEtoUINT(fp) != 0"の分戻す
@@ -257,7 +256,7 @@ void FbxLoader::readFBX(FILE *fp) {
 	FbxRecord.NumChildren = nodeCount;
 	FbxRecord.nodeChildren = new NodeRecord[nodeCount];
 
-	for (UINT i = 0; i < nodeCount; i++) {
+	for (unsigned int i = 0; i < nodeCount; i++) {
 		FbxRecord.nodeChildren[i].set(fp, cnNo, cnLi);
 	}
 
@@ -287,17 +286,17 @@ void FbxLoader::readFBX(FILE *fp) {
 	}
 }
 
-bool FbxLoader::Decompress(NodeRecord *node, UCHAR **output, UINT *outSize, UINT typeSize) {
+bool FbxLoader::Decompress(NodeRecord *node, unsigned char **output, unsigned int *outSize, unsigned int typeSize) {
 	//型1byte, 配列数4byte, 圧縮有無4byte, サイズ4byte, メタdata2byte 計15byte後data
-	UINT comp = convertUCHARtoUINT(&node->Property[5]);//圧縮有無
-	UINT meta = 0;
+	unsigned int comp = convertUCHARtoUINT(&node->Property[5]);//圧縮有無
+	unsigned int meta = 0;
 	if (comp == 1)meta = 2;
-	UINT inSize = convertUCHARtoUINT(&node->Property[9]) - meta;//メタdata分引く
+	unsigned int inSize = convertUCHARtoUINT(&node->Property[9]) - meta;//メタdata分引く
 	if (inSize <= 0)return false;
 	*outSize = convertUCHARtoUINT(&node->Property[1]);
-	*output = new UCHAR[(*outSize) * typeSize];
+	*output = new unsigned char[(*outSize) * typeSize];
 	if (comp == 1) {
-		UCHAR *propertyData = new UCHAR[inSize];
+		unsigned char *propertyData = new unsigned char[inSize];
 		memcpy(propertyData, &node->Property[15], inSize);
 		DecompressDeflate dd;
 		dd.getDecompressArray(propertyData, inSize, *output);//解凍
@@ -311,42 +310,42 @@ bool FbxLoader::Decompress(NodeRecord *node, UCHAR **output, UINT *outSize, UINT
 
 void FbxLoader::getLayerElementSub(NodeRecord *node, LayerElement *le) {
 
-	for (UINT i = 0; i < node->NumChildren; i++) {
+	for (unsigned int i = 0; i < node->NumChildren; i++) {
 		NodeRecord *n1 = &node->nodeChildren[i];
 
 		if (!strcmp(n1->className, "Name")) {
-			UINT size = convertUCHARtoUINT(&n1->Property[1]);
+			unsigned int size = convertUCHARtoUINT(&n1->Property[1]);
 			if (size > 0) {
 				le->name = new char[size + 1];
-				UCHAR *pr = &n1->Property[5];
+				unsigned char *pr = &n1->Property[5];
 				memcpy(le->name, (char*)pr, size);
 				le->name[size] = '\0';
 			}
 		}
 
 		if (!strcmp(n1->className, "MappingInformationType")) {
-			UINT size = convertUCHARtoUINT(&n1->Property[1]);
+			unsigned int size = convertUCHARtoUINT(&n1->Property[1]);
 			if (size > 0) {
 				le->MappingInformationType = new char[size + 1];
-				UCHAR *pr = &n1->Property[5];
+				unsigned char *pr = &n1->Property[5];
 				memcpy(le->MappingInformationType, (char*)pr, size);
 				le->MappingInformationType[size] = '\0';
 			}
 		}
 
 		if (!strcmp(n1->className, "Materials")) {
-			UCHAR *output = nullptr;
-			UINT outSize = 0;
-			Decompress(n1, &output, &outSize, sizeof(INT32));
+			unsigned char *output = nullptr;
+			unsigned int outSize = 0;
+			Decompress(n1, &output, &outSize, sizeof(int));
 			le->Nummaterialarr = outSize;
-			le->materials = new INT32[outSize];
+			le->materials = new int[outSize];
 			ConvertUCHARtoINT32(output, le->materials, outSize);
 			aDELETE(output);
 		}
 
 		if (!strcmp(n1->className, "Normals")) {
-			UCHAR *output = nullptr;
-			UINT outSize = 0;
+			unsigned char *output = nullptr;
+			unsigned int outSize = 0;
 			Decompress(n1, &output, &outSize, sizeof(double));
 			le->Numnormals = outSize;
 			le->normals = new double[outSize];
@@ -355,8 +354,8 @@ void FbxLoader::getLayerElementSub(NodeRecord *node, LayerElement *le) {
 		}
 
 		if (!strcmp(n1->className, "UV")) {
-			UCHAR *output = nullptr;
-			UINT outSize = 0;
+			unsigned char *output = nullptr;
+			unsigned int outSize = 0;
 			Decompress(n1, &output, &outSize, sizeof(double));
 			le->NumUV = outSize;
 			le->UV = new double[outSize];
@@ -365,11 +364,11 @@ void FbxLoader::getLayerElementSub(NodeRecord *node, LayerElement *le) {
 		}
 
 		if (!strcmp(n1->className, "UVIndex")) {
-			UCHAR *output = nullptr;
-			UINT outSize = 0;
-			Decompress(n1, &output, &outSize, sizeof(INT32));
+			unsigned char *output = nullptr;
+			unsigned int outSize = 0;
+			Decompress(n1, &output, &outSize, sizeof(int));
 			le->NumUVindex = outSize;
-			le->UVindex = new INT32[outSize];
+			le->UVindex = new int[outSize];
 			ConvertUCHARtoINT32(output, le->UVindex, outSize);
 			aDELETE(output);
 		}
@@ -378,21 +377,21 @@ void FbxLoader::getLayerElementSub(NodeRecord *node, LayerElement *le) {
 
 void FbxLoader::getLayerElement(NodeRecord *node, FbxMeshNode *mesh) {
 	if (!strcmp(node->className, "LayerElementMaterial")) {
-		INT32 No = convertUCHARtoINT32(&node->Property[1]);//たぶんレイヤーNo取得
+		int No = convertUCHARtoINT32(&node->Property[1]);//たぶんレイヤーNo取得
 		mesh->Material[No] = new LayerElement();
 		LayerElement *mat = mesh->Material[No];
-		INT32 Numl = No + 1;
+		int Numl = No + 1;
 		if (Numl > mesh->NumMaterial)mesh->NumMaterial = Numl;
 		getLayerElementSub(node, mat);
 	}
 	if (!strcmp(node->className, "LayerElementNormal")) {
-		INT32 No = convertUCHARtoINT32(&node->Property[1]);
+		int No = convertUCHARtoINT32(&node->Property[1]);
 		mesh->Normals[No] = new LayerElement();
 		LayerElement *nor = mesh->Normals[No];
 		getLayerElementSub(node, nor);
 	}
 	if (!strcmp(node->className, "LayerElementUV")) {
-		INT32 No = convertUCHARtoINT32(&node->Property[1]);
+		int No = convertUCHARtoINT32(&node->Property[1]);
 		mesh->UV[No] = new LayerElement();
 		LayerElement *uv = mesh->UV[No];
 		getLayerElementSub(node, uv);
@@ -437,15 +436,15 @@ bool FbxLoader::nameComparison(char *name1, char *name2) {
 }
 
 void FbxLoader::setParentPointerOfSubDeformer(FbxMeshNode *mesh) {
-	for (UINT i = 0; i < mesh->NumDeformer + 1; i++) {
+	for (unsigned int i = 0; i < mesh->NumDeformer + 1; i++) {
 		Deformer *defo = nullptr;
 		if (i < mesh->NumDeformer)
 			defo = mesh->deformer[i];
 		else
 			defo = mesh->rootDeformer;
 
-		for (UINT i1 = 0; i1 < defo->NumChild; i1++) {
-			for (UINT i2 = 0; i2 < mesh->NumDeformer; i2++) {
+		for (unsigned int i1 = 0; i1 < defo->NumChild; i1++) {
+			for (unsigned int i2 = 0; i2 < mesh->NumDeformer; i2++) {
 				//登録した子Deformer名と一致するDeformerに自身のポインタを登録
 				if (nameComparison(defo->childName[i1], mesh->deformer[i2]->name)) {
 					mesh->deformer[i2]->parentNode = defo;
@@ -465,7 +464,7 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 		defo->name = new char[len + 1];
 		strcpy_s(defo->name, len + 1, node->nodeName[0]);
 
-		for (UINT i = 0; i < node->connectionNode.size(); i++) {
+		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
 			NodeRecord *n1 = node->connectionNode.data()[i];
 			if (!strcmp(n1->className, "Model")) {//自身のModel
 				getAnimation(n1, defo);
@@ -473,10 +472,10 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 		}
 
 		//子ノードName登録
-		for (UINT i = 0; i < node->connectionNode.size(); i++) {
+		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
 			NodeRecord *n1 = node->connectionNode.data()[i];
 			if (!strcmp(n1->className, "Model")) {//自身のModel
-				for (UINT i1 = 0; i1 < n1->connectionNode.size(); i1++) {
+				for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
 					NodeRecord *n2 = n1->connectionNode.data()[i1];
 					if (!strcmp(n2->className, "Model")) {//子ノードのModel
 						int ln = (int)strlen(n2->nodeName[0]);
@@ -487,24 +486,24 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 			}
 		}
 
-		for (UINT i = 0; i < node->NumChildren; i++) {
+		for (unsigned int i = 0; i < node->NumChildren; i++) {
 			NodeRecord *n1 = &node->nodeChildren[i];
 
 			//インデックス配列,数
 			if (!strcmp(n1->className, "Indexes")) {
-				UCHAR *output = nullptr;
-				UINT outSize = 0;
-				Decompress(n1, &output, &outSize, sizeof(INT32));
+				unsigned char *output = nullptr;
+				unsigned int outSize = 0;
+				Decompress(n1, &output, &outSize, sizeof(int));
 				defo->IndicesCount = outSize;
-				defo->Indices = new INT32[outSize];
+				defo->Indices = new int[outSize];
 				ConvertUCHARtoINT32(output, defo->Indices, outSize);
 				aDELETE(output);
 			}
 
 			//ウエイト
 			if (!strcmp(n1->className, "Weights")) {
-				UCHAR *output = nullptr;
-				UINT outSize = 0;
+				unsigned char *output = nullptr;
+				unsigned int outSize = 0;
 				Decompress(n1, &output, &outSize, sizeof(double));
 				defo->Weights = new double[outSize];
 				ConvertUCHARtoDouble(output, defo->Weights, outSize);
@@ -513,8 +512,8 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 
 			//Transform
 			if (!strcmp(n1->className, "Transform")) {
-				UCHAR *output = nullptr;
-				UINT outSize = 0;
+				unsigned char *output = nullptr;
+				unsigned int outSize = 0;
 				Decompress(n1, &output, &outSize, sizeof(double));
 				ConvertUCHARtoDouble(output, defo->TransformMatrix, outSize);
 				aDELETE(output);
@@ -522,8 +521,8 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 
 			//TransformLink
 			if (!strcmp(n1->className, "TransformLink")) {
-				UCHAR *output = nullptr;
-				UINT outSize = 0;
+				unsigned char *output = nullptr;
+				unsigned int outSize = 0;
 				Decompress(n1, &output, &outSize, sizeof(double));
 				ConvertUCHARtoDouble(output, defo->TransformLinkMatrix, outSize);
 				aDELETE(output);
@@ -535,7 +534,7 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 
 void FbxLoader::getDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 	if (!strcmp(node->className, "Deformer")) {
-		for (UINT i = 0; i < node->connectionNode.size(); i++) {
+		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
 			NodeRecord *n1 = node->connectionNode.data()[i];
 			//各Deformer情報取得
 			getSubDeformer(n1, mesh);
@@ -548,13 +547,13 @@ void FbxLoader::getGeometry(NodeRecord *node, FbxMeshNode *mesh) {
 		int len = (int)strlen(node->nodeName[0]);
 		mesh->name = new char[len + 1];
 		strcpy_s(mesh->name, len + 1, node->nodeName[0]);
-		for (UINT i = 0; i < node->NumChildren; i++) {
+		for (unsigned int i = 0; i < node->NumChildren; i++) {
 			NodeRecord *n1 = &node->nodeChildren[i];
 
 			//頂点
 			if (!strcmp(n1->className, "Vertices") && mesh->vertices == nullptr) {
-				UCHAR *output = nullptr;
-				UINT outSize = 0;
+				unsigned char *output = nullptr;
+				unsigned int outSize = 0;
 				Decompress(n1, &output, &outSize, sizeof(double));
 				mesh->NumVertices = outSize / 3;
 				mesh->vertices = new double[outSize];
@@ -564,24 +563,24 @@ void FbxLoader::getGeometry(NodeRecord *node, FbxMeshNode *mesh) {
 
 			//頂点インデックス
 			if (!strcmp(n1->className, "PolygonVertexIndex") && mesh->polygonVertices == nullptr) {
-				UCHAR *output = nullptr;
-				UINT outSize = 0;
-				Decompress(n1, &output, &outSize, sizeof(INT32));
+				unsigned char *output = nullptr;
+				unsigned int outSize = 0;
+				Decompress(n1, &output, &outSize, sizeof(int));
 				mesh->NumPolygonVertices = outSize;
-				mesh->polygonVertices = new INT32[outSize];
+				mesh->polygonVertices = new int[outSize];
 				ConvertUCHARtoINT32(output, mesh->polygonVertices, outSize);
 				aDELETE(output);
-				for (UINT i1 = 0; i1 < mesh->NumPolygonVertices; i1++) {
+				for (unsigned int i1 = 0; i1 < mesh->NumPolygonVertices; i1++) {
 					if (mesh->polygonVertices[i1] < 0) {
 						//ポリゴン毎の最終インデックスがbit反転されてるので
 						//そこでポリゴン数をカウント
 						mesh->NumPolygon++;
 					}
 				}
-				mesh->PolygonSize = new UINT[mesh->NumPolygon];
-				UINT polCnt = 0;
-				UINT PolygonSizeIndex = 0;
-				for (UINT i1 = 0; i1 < mesh->NumPolygonVertices; i1++) {
+				mesh->PolygonSize = new unsigned int[mesh->NumPolygon];
+				unsigned int polCnt = 0;
+				unsigned int PolygonSizeIndex = 0;
+				for (unsigned int i1 = 0; i1 < mesh->NumPolygonVertices; i1++) {
 					polCnt++;
 					if (mesh->polygonVertices[i1] < 0) {
 						mesh->polygonVertices[i1] = ~mesh->polygonVertices[i1];//bit反転
@@ -595,7 +594,7 @@ void FbxLoader::getGeometry(NodeRecord *node, FbxMeshNode *mesh) {
 			getLayerElement(n1, mesh);
 		}
 
-		for (UINT i = 0; i < node->connectionNode.size(); i++) {
+		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
 			NodeRecord *n1 = node->connectionNode.data()[i];
 
 			//ボーン関連
@@ -604,17 +603,17 @@ void FbxLoader::getGeometry(NodeRecord *node, FbxMeshNode *mesh) {
 	}
 }
 
-void FbxLoader::getMaterial(NodeRecord *node, FbxMeshNode *mesh, UINT *materialIndex) {
+void FbxLoader::getMaterial(NodeRecord *node, FbxMeshNode *mesh, unsigned int *materialIndex) {
 	if (!strcmp(node->className, "Material")) {
 		mesh->material[*materialIndex] = new FbxMaterialNode();
 		int len = (int)strlen(node->nodeName[0]);
 		mesh->material[*materialIndex]->MaterialName = new char[len + 1];
 		strcpy_s(mesh->material[*materialIndex]->MaterialName, len + 1, node->nodeName[0]);
 
-		for (UINT i = 0; i < node->NumChildren; i++) {
+		for (unsigned int i = 0; i < node->NumChildren; i++) {
 			if (!strcmp(node->nodeChildren[i].className, "Properties70")) {
 				NodeRecord *pro70 = &node->nodeChildren[i];
-				for (UINT i1 = 0; i1 < pro70->NumChildren; i1++) {
+				for (unsigned int i1 = 0; i1 < pro70->NumChildren; i1++) {
 					getCol(&pro70->nodeChildren[i1], mesh->material[*materialIndex]->Diffuse, "DiffuseColor");
 					getCol(&pro70->nodeChildren[i1], mesh->material[*materialIndex]->Specular, "SpecularColor");
 					getCol(&pro70->nodeChildren[i1], mesh->material[*materialIndex]->Ambient, "AmbientColor");
@@ -622,11 +621,11 @@ void FbxLoader::getMaterial(NodeRecord *node, FbxMeshNode *mesh, UINT *materialI
 			}
 		}
 
-		for (UINT i = 0; i < node->connectionNode.size(); i++) {
+		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
 			if (!strcmp(node->connectionNode.data()[i]->className, "Texture")) {
 				NodeRecord *tex = node->connectionNode.data()[i];
 				bool texTypeDiff = true;
-				for (UINT i1 = 0; i1 < tex->NumChildren; i1++) {
+				for (unsigned int i1 = 0; i1 < tex->NumChildren; i1++) {
 					if (!strcmp(tex->nodeChildren[i1].className, "TextureName")) {
 						char *texname = tex->nodeChildren[i1].nodeName[0];
 						while (*texname != '\0') { texname++; }
@@ -635,7 +634,7 @@ void FbxLoader::getMaterial(NodeRecord *node, FbxMeshNode *mesh, UINT *materialI
 						if (!strcmp(texname, "normal"))texTypeDiff = false;
 					}
 				}
-				for (UINT i1 = 0; i1 < tex->NumChildren; i1++) {
+				for (unsigned int i1 = 0; i1 < tex->NumChildren; i1++) {
 					if (!strcmp(tex->nodeChildren[i1].className, "FileName")) {
 						NodeRecord *texN = &tex->nodeChildren[i1];
 						int len = (int)strlen(texN->nodeName[0]);
@@ -660,7 +659,7 @@ void FbxLoader::getMaterial(NodeRecord *node, FbxMeshNode *mesh, UINT *materialI
 }
 
 void FbxLoader::getMesh() {
-	for (UINT i = 0; i < rootNode->connectionNode.size(); i++) {
+	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
 		if (!strcmp(rootNode->connectionNode.data()[i]->className, "Model") &&
 			!strcmp(rootNode->connectionNode.data()[i]->nodeName[1], "Mesh")) {
 			NumMesh++;
@@ -669,13 +668,13 @@ void FbxLoader::getMesh() {
 	if (NumMesh <= 0)return;
 	Mesh = new FbxMeshNode[NumMesh];
 
-	UINT mecnt = 0;
-	UINT matcnt = 0;
-	for (UINT i = 0; i < rootNode->connectionNode.size(); i++) {
+	unsigned int mecnt = 0;
+	unsigned int matcnt = 0;
+	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
 		NodeRecord *n1 = rootNode->connectionNode.data()[i];
 		if (!strcmp(n1->className, "Model") &&
 			!strcmp(n1->nodeName[1], "Mesh")) {
-			for (UINT i1 = 0; i1 < n1->connectionNode.size(); i1++) {
+			for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
 				NodeRecord *n2 = n1->connectionNode.data()[i1];
 				getGeometry(n2, &Mesh[mecnt]);
 				getMaterial(n2, &Mesh[mecnt], &matcnt);
@@ -686,11 +685,11 @@ void FbxLoader::getMesh() {
 	}
 
 	//rootBone生成, name登録(本来Deformerじゃないので別に生成)
-	for (UINT i = 0; i < rootNode->connectionNode.size(); i++) {
+	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
 		NodeRecord *n1 = rootNode->connectionNode.data()[i];
 		if (!strcmp(n1->className, "Model") && n1->nodeName[1]) {
 			if (!strcmp(n1->nodeName[1], "Root") || !strcmp(n1->nodeName[1], "Limb")) {
-				for (UINT j = 0; j < NumMesh; j++) {
+				for (unsigned int j = 0; j < NumMesh; j++) {
 					Mesh[j].rootDeformer = new Deformer();
 					Deformer *defo = Mesh[j].rootDeformer;
 					int len = (int)strlen(n1->nodeName[0]);
@@ -698,7 +697,7 @@ void FbxLoader::getMesh() {
 					strcpy_s(defo->name, len + 1, n1->nodeName[0]);
 					getAnimation(n1, defo);
 					//子ノードのModelName登録
-					for (UINT i1 = 0; i1 < n1->connectionNode.size(); i1++) {
+					for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
 						NodeRecord *n2 = n1->connectionNode.data()[i1];
 						if (!strcmp(n2->className, "Model")) {
 							int ln = (int)strlen(n2->nodeName[0]);
@@ -712,12 +711,12 @@ void FbxLoader::getMesh() {
 	}
 
 	//UV整列
-	for (UINT i = 0; i < NumMesh; i++) {
-		for (INT32 i1 = 0; i1 < Mesh[i].NumMaterial; i1++) {
+	for (unsigned int i = 0; i < NumMesh; i++) {
+		for (int i1 = 0; i1 < Mesh[i].NumMaterial; i1++) {
 			LayerElement *uv = Mesh[i].UV[i1];
 			uv->AlignedUV = new double[uv->NumUVindex * 2];
-			UINT cnt = 0;
-			for (UINT i2 = 0; i2 < uv->NumUVindex; i2++) {
+			unsigned int cnt = 0;
+			for (unsigned int i2 = 0; i2 < uv->NumUVindex; i2++) {
 				uv->AlignedUV[cnt++] = uv->UV[uv->UVindex[i2] * 2];//UVindexはUVの2値を一組としてのインデックスなので×2で計算
 				uv->AlignedUV[cnt++] = uv->UV[uv->UVindex[i2] * 2 + 1];
 			}
@@ -727,15 +726,15 @@ void FbxLoader::getMesh() {
 }
 
 void FbxLoader::setParentPointerOfNoneMeshSubDeformer() {
-	for (UINT i = 0; i < NumDeformer + 1; i++) {
+	for (unsigned int i = 0; i < NumDeformer + 1; i++) {
 		Deformer *defo = nullptr;
 		if (i < NumDeformer)
 			defo = deformer[i];
 		else
 			defo = rootDeformer;
 
-		for (UINT i1 = 0; i1 < defo->NumChild; i1++) {
-			for (UINT i2 = 0; i2 < NumDeformer; i2++) {
+		for (unsigned int i1 = 0; i1 < defo->NumChild; i1++) {
+			for (unsigned int i2 = 0; i2 < NumDeformer; i2++) {
 				//登録した子Deformer名と一致するDeformerに自身のポインタを登録
 				if (nameComparison(defo->childName[i1], deformer[i2]->name)) {
 					deformer[i2]->parentNode = defo;
@@ -755,7 +754,7 @@ void FbxLoader::getNoneMeshSubDeformer(NodeRecord *node) {
 		strcpy_s(defo->name, len + 1, node->nodeName[0]);
 		getAnimation(node, defo);
 		//子ノードのModelName登録
-		for (UINT i = 0; i < node->connectionNode.size(); i++) {
+		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
 			NodeRecord *n1 = node->connectionNode.data()[i];
 			if (!strcmp(n1->className, "Model")) {
 				int ln = (int)strlen(n1->nodeName[0]);
@@ -768,7 +767,7 @@ void FbxLoader::getNoneMeshSubDeformer(NodeRecord *node) {
 }
 
 void FbxLoader::getNoneMeshDeformer() {
-	for (UINT i = 0; i < rootNode->connectionNode.size(); i++) {
+	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
 		NodeRecord *n1 = rootNode->connectionNode.data()[i];
 		if (!strcmp(n1->className, "Model") && n1->nodeName[1]) {
 			if (!strcmp(n1->nodeName[1], "Root") || !strcmp(n1->nodeName[1], "Limb")) {
@@ -778,7 +777,7 @@ void FbxLoader::getNoneMeshDeformer() {
 				strcpy_s(rootDeformer->name, len + 1, n1->nodeName[0]);
 				getAnimation(n1, rootDeformer);
 				//子ノードのModelName登録
-				for (UINT i1 = 0; i1 < n1->connectionNode.size(); i1++) {
+				for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
 					NodeRecord *n2 = n1->connectionNode.data()[i1];
 					if (!strcmp(n2->className, "Model")) {
 						int ln = (int)strlen(n2->nodeName[0]);
@@ -797,12 +796,12 @@ void FbxLoader::getNoneMeshDeformer() {
 void FbxLoader::getCol(NodeRecord *pro70Child, double Col[3], char *ColStr) {
 	if (!strcmp(pro70Child->className, "P") &&
 		!strcmp(pro70Child->nodeName[0], ColStr)) {
-		UINT proInd = 1;
-		for (UINT i = 0; i < 4; i++) {
+		unsigned int proInd = 1;
+		for (unsigned int i = 0; i < 4; i++) {
 			proInd += convertUCHARtoUINT(&pro70Child->Property[proInd]) + 1 + 4;
 			int k = 0;
 		}
-		for (UINT i = 0; i < 3; i++) {
+		for (unsigned int i = 0; i < 3; i++) {
 			ConvertUCHARtoDouble(&pro70Child->Property[proInd], &Col[i], 1);
 			proInd += 9;
 			int f = 0;
@@ -813,11 +812,11 @@ void FbxLoader::getCol(NodeRecord *pro70Child, double Col[3], char *ColStr) {
 void FbxLoader::getLcl(NodeRecord *pro70Child, AnimationCurve anim[3], char *LclStr) {
 	if (!strcmp(pro70Child->className, "P") &&
 		!strcmp(pro70Child->nodeName[0], LclStr)) {
-		UINT proInd = 1;
-		for (UINT i = 0; i < 4; i++) {
+		unsigned int proInd = 1;
+		for (unsigned int i = 0; i < 4; i++) {
 			proInd += convertUCHARtoUINT(&pro70Child->Property[proInd]) + 1 + 4;
 		}
-		for (UINT i = 0; i < 3; i++) {
+		for (unsigned int i = 0; i < 3; i++) {
 			ConvertUCHARtoDouble(&pro70Child->Property[proInd], &anim[i].Lcl, 1);
 			proInd += 9;
 		}
@@ -825,13 +824,13 @@ void FbxLoader::getLcl(NodeRecord *pro70Child, AnimationCurve anim[3], char *Lcl
 }
 
 void FbxLoader::getAnimationCurve(NodeRecord *animNode, AnimationCurve anim[3], char *Lcl) {
-	UINT animInd = 0;
+	unsigned int animInd = 0;
 	if (!strcmp(animNode->className, "AnimationCurveNode") &&
 		!strcmp(animNode->nodeName[0], Lcl)) {
-		for (UINT i = 0; i < animNode->connectionNode.size(); i++) {
+		for (unsigned int i = 0; i < animNode->connectionNode.size(); i++) {
 			if (!strcmp(animNode->connectionNode.data()[i]->className, "AnimationCurve")) {
 				NodeRecord *animCurve = animNode->connectionNode.data()[i];
-				for (UINT i1 = 0; i1 < animCurve->NumChildren; i1++) {
+				for (unsigned int i1 = 0; i1 < animCurve->NumChildren; i1++) {
 					if (!strcmp(animCurve->nodeChildren[i1].className, "Default")) {
 						if (anim[animInd].def)continue;
 						anim[animInd].Default = convertUCHARtoDouble(&animCurve->nodeChildren[i1].Property[1]);
@@ -839,8 +838,8 @@ void FbxLoader::getAnimationCurve(NodeRecord *animNode, AnimationCurve anim[3], 
 					}
 					if (!strcmp(animCurve->nodeChildren[i1].className, "KeyTime")) {
 						if (anim[animInd].KeyTime)continue;
-						UCHAR *output = nullptr;
-						UINT outSize = 0;
+						unsigned char *output = nullptr;
+						unsigned int outSize = 0;
 						if (Decompress(&animCurve->nodeChildren[i1], &output, &outSize, sizeof(int64_t))) {
 							anim[animInd].NumKey = outSize;
 							anim[animInd].KeyTime = new int64_t[outSize];
@@ -850,8 +849,8 @@ void FbxLoader::getAnimationCurve(NodeRecord *animNode, AnimationCurve anim[3], 
 					}
 					if (!strcmp(animCurve->nodeChildren[i1].className, "KeyValueFloat")) {
 						if (anim[animInd].KeyValueFloat)continue;
-						UCHAR *output = nullptr;
-						UINT outSize = 0;
+						unsigned char *output = nullptr;
+						unsigned int outSize = 0;
 						if (Decompress(&animCurve->nodeChildren[i1], &output, &outSize, sizeof(float))) {
 							anim[animInd].NumKey = outSize;
 							anim[animInd].KeyValueFloat = new float[outSize];
@@ -868,10 +867,10 @@ void FbxLoader::getAnimationCurve(NodeRecord *animNode, AnimationCurve anim[3], 
 
 void FbxLoader::getAnimation(NodeRecord *model, Deformer *defo) {
 	//Lcl Translation, Lcl Rotation, Lcl Scaling取得
-	for (UINT i = 0; i < model->NumChildren; i++) {
+	for (unsigned int i = 0; i < model->NumChildren; i++) {
 		if (!strcmp(model->nodeChildren[i].className, "Properties70")) {
 			NodeRecord *pro70 = &model->nodeChildren[i];
-			for (UINT i1 = 0; i1 < pro70->NumChildren; i1++) {
+			for (unsigned int i1 = 0; i1 < pro70->NumChildren; i1++) {
 				getLcl(&pro70->nodeChildren[i1], defo->Translation, "Lcl Translation");
 				getLcl(&pro70->nodeChildren[i1], defo->Rotation, "Lcl Rotation");
 				getLcl(&pro70->nodeChildren[i1], defo->Scaling, "Lcl Scaling");
@@ -879,36 +878,36 @@ void FbxLoader::getAnimation(NodeRecord *model, Deformer *defo) {
 		}
 	}
 	//Animation関連
-	for (UINT i = 0; i < model->connectionNode.size(); i++) {
+	for (unsigned int i = 0; i < model->connectionNode.size(); i++) {
 		getAnimationCurve(model->connectionNode.data()[i], defo->Translation, "T");
 		getAnimationCurve(model->connectionNode.data()[i], defo->Rotation, "R");
 		getAnimationCurve(model->connectionNode.data()[i], defo->Scaling, "S");
 	}
 }
 
-void FbxLoader::ConvertUCHARtoDouble(UCHAR *arr, double *outArr, UINT outsize) {
-	for (UINT i = 0; i < outsize; i++) {
+void FbxLoader::ConvertUCHARtoDouble(unsigned char *arr, double *outArr, unsigned int outsize) {
+	for (unsigned int i = 0; i < outsize; i++) {
 		int addInd = i * 8;
-		UINT64 tmp = (((UINT64)arr[7 + addInd] << 56) | ((UINT64)arr[6 + addInd] << 48) |
-			((UINT64)arr[5 + addInd] << 40) | ((UINT64)arr[4 + addInd] << 32) |
-			((UINT64)arr[3 + addInd] << 24) | ((UINT64)arr[2 + addInd] << 16) |
-			((UINT64)arr[1 + addInd] << 8) | ((UINT64)arr[addInd]));
+		unsigned long long tmp = (((unsigned long long)arr[7 + addInd] << 56) | ((unsigned long long)arr[6 + addInd] << 48) |
+			((unsigned long long)arr[5 + addInd] << 40) | ((unsigned long long)arr[4 + addInd] << 32) |
+			((unsigned long long)arr[3 + addInd] << 24) | ((unsigned long long)arr[2 + addInd] << 16) |
+			((unsigned long long)arr[1 + addInd] << 8) | ((unsigned long long)arr[addInd]));
 		//byte列そのままで型変換する
 		double *dp = reinterpret_cast<double*>(&tmp);
 		outArr[i] = *dp;
 	}
 }
 
-void FbxLoader::ConvertUCHARtoINT32(UCHAR *arr, INT32 *outArr, UINT outsize) {
-	for (UINT i = 0; i < outsize; i++) {
+void FbxLoader::ConvertUCHARtoINT32(unsigned char *arr, int *outArr, unsigned int outsize) {
+	for (unsigned int i = 0; i < outsize; i++) {
 		int addInd = i * 4;
-		outArr[i] = (((INT32)arr[3 + addInd] << 24) | ((INT32)arr[2 + addInd] << 16) |
-			((INT32)arr[1 + addInd] << 8) | ((INT32)arr[addInd]));
+		outArr[i] = (((int)arr[3 + addInd] << 24) | ((int)arr[2 + addInd] << 16) |
+			((int)arr[1 + addInd] << 8) | ((int)arr[addInd]));
 	}
 }
 
-void FbxLoader::ConvertUCHARtoint64_t(UCHAR *arr, int64_t *outArr, UINT outsize) {
-	for (UINT i = 0; i < outsize; i++) {
+void FbxLoader::ConvertUCHARtoint64_t(unsigned char *arr, int64_t *outArr, unsigned int outsize) {
+	for (unsigned int i = 0; i < outsize; i++) {
 		int addInd = i * 8;
 		outArr[i] = (((int64_t)arr[7 + addInd] << 56) | ((int64_t)arr[6 + addInd] << 48) |
 			((int64_t)arr[5 + addInd] << 40) | ((int64_t)arr[4 + addInd]) << 32 |
@@ -917,11 +916,11 @@ void FbxLoader::ConvertUCHARtoint64_t(UCHAR *arr, int64_t *outArr, UINT outsize)
 	}
 }
 
-void FbxLoader::ConvertUCHARtofloat(UCHAR *arr, float *outArr, UINT outsize) {
-	for (UINT i = 0; i < outsize; i++) {
+void FbxLoader::ConvertUCHARtofloat(unsigned char *arr, float *outArr, unsigned int outsize) {
+	for (unsigned int i = 0; i < outsize; i++) {
 		int addInd = i * 4;
-		UINT32 tmp = (((UINT32)arr[3 + addInd] << 24) | ((UINT32)arr[2 + addInd] << 16) |
-			((UINT32)arr[1 + addInd] << 8) | ((UINT32)arr[addInd]));
+		unsigned int  tmp = (((unsigned int )arr[3 + addInd] << 24) | ((unsigned int )arr[2 + addInd] << 16) |
+			((unsigned int )arr[1 + addInd] << 8) | ((unsigned int )arr[addInd]));
 		//byte列そのままで型変換する
 		float *fp = reinterpret_cast<float*>(&tmp);
 		outArr[i] = *fp;
@@ -929,8 +928,8 @@ void FbxLoader::ConvertUCHARtofloat(UCHAR *arr, float *outArr, UINT outsize) {
 }
 
 void FbxLoader::drawname(NodeRecord *node, bool cnNode) {
-	static UINT level = 0;
-	for (UINT j = 0; j < level; j++) {
+	static unsigned int level = 0;
+	for (unsigned int j = 0; j < level; j++) {
 		std::cout << "    " << std::flush;
 	}
 	std::cout << level << " " << node->className << ":" << std::flush;
@@ -938,18 +937,18 @@ void FbxLoader::drawname(NodeRecord *node, bool cnNode) {
 	std::cout << std::endl;
 	for (int i = 0; i < NUMNODENAME; i++) {
 		if (node->nodeName[i]) {
-			for (UINT j = 0; j < level; j++) {
+			for (unsigned int j = 0; j < level; j++) {
 				std::cout << "    " << std::flush;
 			}
 			std::cout << " " << level << " " << node->nodeName[i] << std::endl;
 		}
 	}
 	level++;
-	for (UINT i = 0; i < node->NumChildren; i++) {
+	for (unsigned int i = 0; i < node->NumChildren; i++) {
 		drawname(&node->nodeChildren[i], cnNode);
 	}
 	if (cnNode) {
-		for (UINT i = 0; i < node->connectionNode.size(); i++) {
+		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
 			drawname(node->connectionNode.data()[i], cnNode);
 		}
 	}
@@ -962,14 +961,13 @@ FbxLoader::~FbxLoader() {
 	std::vector<ConnectionNo>().swap(cnNo);//解放
 	std::vector<ConnectionList>().swap(cnLi);//解放
 	rootNode = nullptr;
-	for (UINT i = 0; i < NumDeformer; i++)sDELETE(deformer[i]);
+	for (unsigned int i = 0; i < NumDeformer; i++)sDELETE(deformer[i]);
 	sDELETE(rootDeformer);
 }
 
 bool FbxLoader::setFbxFile(char *pass) {
 	FILE *fp;
 	if (fopen_s(&fp, pass, "rb") != 0) {
-		MessageBoxA(0, "ファイル読み込みエラー", 0, MB_OK);
 		return false;
 	}
 
@@ -990,19 +988,19 @@ NodeRecord *FbxLoader::getRootNode() {
 	return rootNode;
 }
 
-UINT FbxLoader::getNumFbxMeshNode() {
+unsigned int FbxLoader::getNumFbxMeshNode() {
 	return NumMesh;
 }
 
-FbxMeshNode *FbxLoader::getFbxMeshNode(UINT index) {
+FbxMeshNode *FbxLoader::getFbxMeshNode(unsigned int index) {
 	return &Mesh[index];
 }
 
-UINT FbxLoader::getNumNoneMeshDeformer() {
+unsigned int FbxLoader::getNumNoneMeshDeformer() {
 	return NumDeformer;
 }
 
-Deformer *FbxLoader::getNoneMeshDeformer(UINT index) {
+Deformer *FbxLoader::getNoneMeshDeformer(unsigned int index) {
 	return deformer[index];
 }
 

@@ -7,36 +7,43 @@
 #ifndef Class_DecompressDeflate_Header
 #define Class_DecompressDeflate_Header
 
-#include <windows.h>
 #define a_DELETE(p) if(p){delete[] p;    p=nullptr;}
-#define byteArrayNumbit 8
 
 class DecompressDeflate {
 
 private:
-	static const UINT16 dest[];
-	static const UCHAR NumBit[];
-	UINT16 strSign[286] = { 0 };
-	UCHAR strNumSign[286] = { 0 };
-	UINT16 lenSign[30] = { 0 };
-	UCHAR lenNumSign[30] = { 0 };
+	static const int byteArrayNumbit = 8;
+	static const int LEFT_INV_BIT1 = 0b0101010101010101;
+	static const int RIGHT_INV_BIT1 = 0b1010101010101010;
+	static const int LEFT_INV_BIT2 = 0b0011001100110011;
+	static const int RIGHT_INV_BIT2 = 0b1100110011001100;
+	static const int LEFT_INV_BIT4 = 0b0000111100001111;
+	static const int RIGHT_INV_BIT4 = 0b1111000011110000;
+	static const int bitMask[];
+	static const unsigned short dest[];
+	static const unsigned char NumBit[];
+	unsigned short strSign[286] = { 0 };
+	unsigned char strNumSign[286] = { 0 };
+	unsigned short lenSign[30] = { 0 };
+	unsigned char lenNumSign[30] = { 0 };
 
-	void bitInversion(UCHAR *byteArray, UINT size);
-	void getLength(UINT16 DecryptionVal, UINT16 *len, UCHAR *bitlen);
-	void getDestLength(UINT16 Val, UINT16 *len, UCHAR *bitlen);
-	void DecompressLZSS(UCHAR *outArray, UINT *outIndex, UINT16 MatchLen, UINT16 destLen);
-	void getBit(UINT64 *curSearchBit, UCHAR *byteArray, UCHAR NumBit, UINT16 *outBinArr, bool firstRight);
+	unsigned short intInversion(unsigned short bit16, int numBit);
+	void bitInversion(unsigned char *byteArray, unsigned int size);
+	void getLength(unsigned short DecryptionVal, unsigned short *len, unsigned char *bitlen);
+	void getDestLength(unsigned short Val, unsigned short *len, unsigned char *bitlen);
+	void DecompressLZSS(unsigned char *outArray, unsigned int *outIndex, unsigned short MatchLen, unsigned short destLen);
+	void getBit(unsigned long long *curSearchBit, unsigned char *byteArray, unsigned char NumBit, unsigned short *outBinArr, bool firstRight);
 	void createFixedHuffmanSign();
-	void SortIndex(UINT16 *sortedIndex, UCHAR *hclens, UINT size);
-	void CreateSign(UINT16 *clens, UCHAR *hclens, UINT16 *SortedIndex, UINT size);
-	void createCustomHuffmanSign(UINT64 *curSearchBit, UCHAR *byteArray);
-	void DecompressHuffman(UINT64 *curSearchBit, UCHAR *byteArray, UINT *outIndex, UCHAR *outArray);
-	void Uncompress(UINT64 *curSearchBit, UCHAR *byteArray, UINT *outIndex, UCHAR *outArray);
-	UINT16 blockFinal(UINT64 *curSearchBit, UCHAR *byteArray);
-	UINT16 blockType(UINT64 *curSearchBit, UCHAR *byteArray);
+	void SortIndex(unsigned short *sortedIndex, unsigned char *hclens, unsigned int size);
+	void CreateSign(unsigned short *clens, unsigned char *hclens, unsigned short *SortedIndex, unsigned int size);
+	void createCustomHuffmanSign(unsigned long long *curSearchBit, unsigned char *byteArray);
+	void DecompressHuffman(unsigned long long *curSearchBit, unsigned char *byteArray, unsigned int *outIndex, unsigned char *outArray);
+	void Uncompress(unsigned long long *curSearchBit, unsigned char *byteArray, unsigned int *outIndex, unsigned char *outArray);
+	unsigned short blockFinal(unsigned long long *curSearchBit, unsigned char *byteArray);
+	unsigned short blockType(unsigned long long *curSearchBit, unsigned char *byteArray);
 
 public:
-	void getDecompressArray(UCHAR *byteArray, UINT size, UCHAR *outArray);
+	bool getDecompressArray(unsigned char *byteArray, unsigned int size, unsigned char *outArray);
 };
 
 #endif

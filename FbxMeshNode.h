@@ -7,7 +7,6 @@
 #ifndef Class_FbxMeshNode_Header
 #define Class_FbxMeshNode_Header
 
-#include <windows.h>
 #include <stdint.h>
 
 #define sDELETE(p) if(p){delete p;      p=nullptr;}
@@ -24,14 +23,14 @@ private:
 	friend FbxLoader;
 	char *MappingInformationType = nullptr;
 	char *name = nullptr;
-	UINT Nummaterialarr = 0;
-	INT32 *materials = nullptr;
-	UINT Numnormals = 0;
+	unsigned int Nummaterialarr = 0;
+	int *materials = nullptr;
+	unsigned int Numnormals = 0;
 	double *normals = nullptr;
-	UINT NumUV = 0;
+	unsigned int NumUV = 0;
 	double *UV = nullptr;
-	UINT NumUVindex = 0;
-	INT32 *UVindex = nullptr;
+	unsigned int NumUVindex = 0;
+	int *UVindex = nullptr;
 	double *AlignedUV = nullptr;
 
 	~LayerElement() {
@@ -51,7 +50,7 @@ private:
 	friend Deformer;
 	friend FbxLoader;
 	double Lcl = 0;
-	UINT NumKey = 0;
+	unsigned int NumKey = 0;
 	double Default = 0.0;
 	bool def = false;
 	int64_t *KeyTime = nullptr;
@@ -71,7 +70,7 @@ private:
 	friend FbxLoader;
 	//ツリー情報
 	char *name = nullptr;//自身の名前
-	UINT NumChild = 0;
+	unsigned int NumChild = 0;
 	char *childName[100] = { nullptr };//子DeformerName
 	Deformer *parentNode = nullptr;//EvaluateGlobalTransformの計算に使う
 
@@ -109,13 +108,13 @@ public:
 	int getIndicesCount();
 	int *getIndices();
 	double *getWeights();
-	double getTransformLinkMatrix(UINT y, UINT x);
+	double getTransformLinkMatrix(unsigned int y, unsigned int x);
 	int64_t getTimeFRAMES60(int frame);
 	int64_t getTimeFRAMES30(int frame);
 	void EvaluateLocalTransform(int64_t time);
 	void EvaluateGlobalTransform(int64_t time);
-	double getEvaluateLocalTransform(UINT y, UINT x);
-	double getEvaluateGlobalTransform(UINT y, UINT x);
+	double getEvaluateLocalTransform(unsigned int y, unsigned int x);
+	double getEvaluateGlobalTransform(unsigned int y, unsigned int x);
 };
 
 class FbxMaterialNode {
@@ -144,17 +143,17 @@ private:
 	friend FbxLoader;
 	char *name = nullptr;
 	double *vertices = nullptr;//頂点
-	UINT NumVertices = 0;//頂点数, xyzで1組
-	INT32 *polygonVertices = nullptr;//頂点インデックス
-	UINT NumPolygonVertices = 0;//頂点インデックス数
-	UINT NumPolygon = 0;//ポリゴン数
-	UINT *PolygonSize = nullptr;//各ポリゴン頂点インデックス数
-	INT32 NumMaterial = 0;//マテリアル数
+	unsigned int NumVertices = 0;//頂点数, xyzで1組
+	int *polygonVertices = nullptr;//頂点インデックス
+	unsigned int NumPolygonVertices = 0;//頂点インデックス数
+	unsigned int NumPolygon = 0;//ポリゴン数
+	unsigned int *PolygonSize = nullptr;//各ポリゴン頂点インデックス数
+	int NumMaterial = 0;//マテリアル数
 	FbxMaterialNode *material[5] = { nullptr };
 	LayerElement *Material[5] = { nullptr };
 	LayerElement *Normals[5] = { nullptr };
 	LayerElement *UV[5] = { nullptr };
-	UINT NumDeformer = 0;
+	unsigned int NumDeformer = 0;
 	Deformer *deformer[256] = { nullptr };
 	Deformer *rootDeformer = nullptr;
 
@@ -163,46 +162,46 @@ public:
 	char *getName();
 
 	//頂点
-	UINT getNumVertices();
+	unsigned int getNumVertices();
 	double *getVertices();
 
 	//頂点インデックス
-	UINT getNumPolygonVertices();
-	INT32 *getPolygonVertices();
+	unsigned int getNumPolygonVertices();
+	int *getPolygonVertices();
 
 	//ポリゴン
-	UINT getNumPolygon();
-	UINT getPolygonSize(UINT pind);
-	UINT getNumMaterial();
+	unsigned int getNumPolygon();
+	unsigned int getPolygonSize(unsigned int pind);
+	unsigned int getNumMaterial();
 
 	//Material
-	char *getMaterialName(UINT layerIndex = 0);
-	char *getMaterialMappingInformationType(UINT layerIndex = 0);
-	INT32 getMaterialNoOfPolygon(UINT polygonNo, UINT layerIndex = 0);
-	char *getDiffuseTextureName(UINT Index);
-	char *getNormalTextureName(UINT Index);
-	double getDiffuseColor(UINT Index, UINT ColIndex);
-	double getSpecularColor(UINT Index, UINT ColIndex);
-	double getAmbientColor(UINT Index, UINT ColIndex);
+	char *getMaterialName(unsigned int layerIndex = 0);
+	char *getMaterialMappingInformationType(unsigned int layerIndex = 0);
+	int getMaterialNoOfPolygon(unsigned int polygonNo, unsigned int layerIndex = 0);
+	char *getDiffuseTextureName(unsigned int Index);
+	char *getNormalTextureName(unsigned int Index);
+	double getDiffuseColor(unsigned int Index, unsigned int ColIndex);
+	double getSpecularColor(unsigned int Index, unsigned int ColIndex);
+	double getAmbientColor(unsigned int Index, unsigned int ColIndex);
 
 	//Normal
-	UINT getNumNormal(UINT layerIndex = 0);
-	char *getNormalName(UINT layerIndex = 0);
-	char *getNormalMappingInformationType(UINT layerIndex = 0);
-	double *getNormal(UINT layerIndex = 0);
+	unsigned int getNumNormal(unsigned int layerIndex = 0);
+	char *getNormalName(unsigned int layerIndex = 0);
+	char *getNormalMappingInformationType(unsigned int layerIndex = 0);
+	double *getNormal(unsigned int layerIndex = 0);
 
 	//UV
-	UINT getNumUV(UINT layerIndex = 0);
-	char *getUVName(UINT layerIndex = 0);
-	char *getUVMappingInformationType(UINT layerIndex = 0);
-	double *getUV(UINT layerIndex = 0);
-	UINT getNumUVindex(UINT layerIndex = 0);
-	INT32 *getUVindex(UINT layerIndex = 0);
-	double *getAlignedUV(UINT layerIndex = 0);
+	unsigned int getNumUV(unsigned int layerIndex = 0);
+	char *getUVName(unsigned int layerIndex = 0);
+	char *getUVMappingInformationType(unsigned int layerIndex = 0);
+	double *getUV(unsigned int layerIndex = 0);
+	unsigned int getNumUVindex(unsigned int layerIndex = 0);
+	int *getUVindex(unsigned int layerIndex = 0);
+	double *getAlignedUV(unsigned int layerIndex = 0);
 
 	//Deformer
-	UINT getNumDeformer();
-	Deformer *getDeformer(UINT index);
+	unsigned int getNumDeformer();
+	Deformer *getDeformer(unsigned int index);
 };
 
 #endif
