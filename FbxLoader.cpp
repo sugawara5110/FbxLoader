@@ -175,8 +175,8 @@ void NodeRecord::set(FILE *fp, std::vector<ConnectionNo>& cn, std::vector<Connec
 	fgetpos(fp, &curpos);
 	//現在のファイルポインタがEndOffsetより手前,かつ
 	//現ファイルポインタから4byteが全て0ではない場合, 子ノード有り
-	if (EndOffset > unsigned int(curpos) && convertBYTEtoUINT(fp) != 0) {
-		unsigned int topChildPointer = unsigned int(curpos);
+	if (EndOffset > (unsigned int)(curpos) && convertBYTEtoUINT(fp) != 0) {
+		unsigned int topChildPointer = (unsigned int)(curpos);
 		unsigned int childEndOffset = 0;
 		//子ノードEndOffsetをたどり,個数カウント
 		do {
@@ -462,7 +462,7 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 		//Deformer名
 		int len = (int)strlen(node->nodeName[0]);
 		defo->name = new char[len + 1];
-		strcpy_s(defo->name, len + 1, node->nodeName[0]);
+		strcpy(defo->name, node->nodeName[0]);
 
 		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
 			NodeRecord *n1 = node->connectionNode.data()[i];
@@ -480,7 +480,7 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 					if (!strcmp(n2->className, "Model")) {//子ノードのModel
 						int ln = (int)strlen(n2->nodeName[0]);
 						defo->childName[defo->NumChild] = new char[ln + 1];
-						strcpy_s(defo->childName[defo->NumChild++], ln + 1, n2->nodeName[0]);
+						strcpy(defo->childName[defo->NumChild++], n2->nodeName[0]);
 					}
 				}
 			}
@@ -546,7 +546,7 @@ void FbxLoader::getGeometry(NodeRecord *node, FbxMeshNode *mesh) {
 	if (!strcmp(node->className, "Geometry")) {
 		int len = (int)strlen(node->nodeName[0]);
 		mesh->name = new char[len + 1];
-		strcpy_s(mesh->name, len + 1, node->nodeName[0]);
+		strcpy(mesh->name, node->nodeName[0]);
 		for (unsigned int i = 0; i < node->NumChildren; i++) {
 			NodeRecord *n1 = &node->nodeChildren[i];
 
@@ -608,7 +608,7 @@ void FbxLoader::getMaterial(NodeRecord *node, FbxMeshNode *mesh, unsigned int *m
 		mesh->material[*materialIndex] = new FbxMaterialNode();
 		int len = (int)strlen(node->nodeName[0]);
 		mesh->material[*materialIndex]->MaterialName = new char[len + 1];
-		strcpy_s(mesh->material[*materialIndex]->MaterialName, len + 1, node->nodeName[0]);
+		strcpy(mesh->material[*materialIndex]->MaterialName, node->nodeName[0]);
 
 		for (unsigned int i = 0; i < node->NumChildren; i++) {
 			if (!strcmp(node->nodeChildren[i].className, "Properties70")) {
@@ -641,13 +641,13 @@ void FbxLoader::getMaterial(NodeRecord *node, FbxMeshNode *mesh, unsigned int *m
 						if (texTypeDiff) {
 							if (!mesh->material[*materialIndex]->textureDifName) {
 								mesh->material[*materialIndex]->textureDifName = new char[len + 1];
-								strcpy_s(mesh->material[*materialIndex]->textureDifName, len + 1, texN->nodeName[0]);
+								strcpy(mesh->material[*materialIndex]->textureDifName, texN->nodeName[0]);
 							}
 						}
 						else {
 							if (!mesh->material[*materialIndex]->textureNorName) {
 								mesh->material[*materialIndex]->textureNorName = new char[len + 1];
-								strcpy_s(mesh->material[*materialIndex]->textureNorName, len + 1, texN->nodeName[0]);
+								strcpy(mesh->material[*materialIndex]->textureNorName, texN->nodeName[0]);
 							}
 						}
 					}
@@ -694,7 +694,7 @@ void FbxLoader::getMesh() {
 					Deformer *defo = Mesh[j].rootDeformer;
 					int len = (int)strlen(n1->nodeName[0]);
 					defo->name = new char[len + 1];
-					strcpy_s(defo->name, len + 1, n1->nodeName[0]);
+					strcpy(defo->name, n1->nodeName[0]);
 					getAnimation(n1, defo);
 					//子ノードのModelName登録
 					for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
@@ -702,7 +702,7 @@ void FbxLoader::getMesh() {
 						if (!strcmp(n2->className, "Model")) {
 							int ln = (int)strlen(n2->nodeName[0]);
 							defo->childName[defo->NumChild] = new char[ln + 1];
-							strcpy_s(defo->childName[defo->NumChild++], ln + 1, n2->nodeName[0]);
+							strcpy(defo->childName[defo->NumChild++], n2->nodeName[0]);
 						}
 					}
 				}
@@ -751,7 +751,7 @@ void FbxLoader::getNoneMeshSubDeformer(NodeRecord *node) {
 		NumDeformer++;
 		int len = (int)strlen(node->nodeName[0]);
 		defo->name = new char[len + 1];
-		strcpy_s(defo->name, len + 1, node->nodeName[0]);
+		strcpy(defo->name, node->nodeName[0]);
 		getAnimation(node, defo);
 		//子ノードのModelName登録
 		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
@@ -759,7 +759,7 @@ void FbxLoader::getNoneMeshSubDeformer(NodeRecord *node) {
 			if (!strcmp(n1->className, "Model")) {
 				int ln = (int)strlen(n1->nodeName[0]);
 				defo->childName[defo->NumChild] = new char[ln + 1];
-				strcpy_s(defo->childName[defo->NumChild++], ln + 1, n1->nodeName[0]);
+				strcpy(defo->childName[defo->NumChild++], n1->nodeName[0]);
 				getNoneMeshSubDeformer(n1);
 			}
 		}
@@ -774,7 +774,7 @@ void FbxLoader::getNoneMeshDeformer() {
 				rootDeformer = new Deformer();
 				int len = (int)strlen(n1->nodeName[0]);
 				rootDeformer->name = new char[len + 1];
-				strcpy_s(rootDeformer->name, len + 1, n1->nodeName[0]);
+				strcpy(rootDeformer->name, n1->nodeName[0]);
 				getAnimation(n1, rootDeformer);
 				//子ノードのModelName登録
 				for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
@@ -782,7 +782,7 @@ void FbxLoader::getNoneMeshDeformer() {
 					if (!strcmp(n2->className, "Model")) {
 						int ln = (int)strlen(n2->nodeName[0]);
 						rootDeformer->childName[rootDeformer->NumChild] = new char[ln + 1];
-						strcpy_s(rootDeformer->childName[rootDeformer->NumChild++], ln + 1, n2->nodeName[0]);
+						strcpy(rootDeformer->childName[rootDeformer->NumChild++], n2->nodeName[0]);
 						//ついでに子ノードのDeformer生成
 						getNoneMeshSubDeformer(n2);
 					}
@@ -966,8 +966,8 @@ FbxLoader::~FbxLoader() {
 }
 
 bool FbxLoader::setFbxFile(char *pass) {
-	FILE *fp;
-	if (fopen_s(&fp, pass, "rb") != 0) {
+	FILE *fp = fopen(pass, "rb");
+	if (fp == NULL) {
 		return false;
 	}
 
