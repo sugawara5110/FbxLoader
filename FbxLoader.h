@@ -13,7 +13,23 @@
 
 #define NUMNODENAME 10
 
-unsigned int convertBYTEtoUINT(FILE *fp);
+class FilePointer {
+
+private:
+	unsigned int pointer = 0;
+	unsigned char *fileStr = nullptr;
+
+public:
+	~FilePointer();
+	bool setFile(char *pass);
+	void setCharArray(char *cArray, int size);//FILE使わないで読み込む時使用
+	unsigned int getPos();
+	void seekPointer(unsigned int ind);
+	unsigned char getByte();
+	void fRead(char *dst, int byteSize);
+	unsigned int convertBYTEtoUINT();
+};
+
 unsigned int convertUCHARtoUINT(unsigned char *arr);
 int convertUCHARtoINT32(unsigned char *arr);
 int64_t convertUCHARtoint64(unsigned char *arr);
@@ -89,7 +105,7 @@ private:
 
 	void searchName_Type(std::vector<ConnectionNo>& cn);
 	void createConnectionList(std::vector<ConnectionList>& cnLi);
-	void set(FILE *fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi);
+	void set(FilePointer *fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi);
 	~NodeRecord();
 };
 
@@ -108,9 +124,9 @@ private:
 	Deformer *deformer[256] = { nullptr };//デフォーマーのみのファイル対応
 	Deformer *rootDeformer = nullptr;
 
-	bool fileCheck(FILE *fp);
-	void searchVersion(FILE *fp);
-	void readFBX(FILE *fp);
+	bool fileCheck(FilePointer *fp);
+	void searchVersion(FilePointer *fp);
+	void readFBX(FilePointer *fp);
 	bool Decompress(NodeRecord *node, unsigned char **output, unsigned int *outSize, unsigned int typeSize);
 	void getLayerElementSub(NodeRecord *node, LayerElement *le);
 	void getLayerElement(NodeRecord *node, FbxMeshNode *mesh);
@@ -137,6 +153,7 @@ private:
 public:
 	~FbxLoader();
 	bool setFbxFile(char *pass);
+	bool setBinaryInFbxFile(char *strArray, int size);
 	NodeRecord *getFbxRecord();
 	NodeRecord *getRootNode();
 	unsigned int getNumFbxMeshNode();

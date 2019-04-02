@@ -10,12 +10,59 @@
 #include "DecompressDeflate.h"
 #define Kaydara_FBX_binary 18
 
-unsigned int convertBYTEtoUINT(FILE *fp) {
-	char ver[4];
-	fread(ver, sizeof(char), 4, fp);
+FilePointer::~FilePointer() {
+	if (fileStr) {
+		delete[] fileStr;
+		fileStr = nullptr;
+	}
+}
 
-	return ((unsigned char)ver[3] << 24) | ((unsigned char)ver[2] << 16) |
-		((unsigned char)ver[1] << 8) | ((unsigned char)ver[0]);
+bool FilePointer::setFile(char *pass) {
+	FILE *fp = fopen(pass, "rb");
+	if (fp == NULL) {
+		return false;
+	}
+	unsigned int count = 0;
+	while (fgetc(fp) != EOF) {
+		count++;
+	}
+	count++;//EOFの分
+	fseek(fp, 0, SEEK_SET);//最初に戻す
+	fileStr = new unsigned char[count];
+	fread((char*)fileStr, sizeof(unsigned char), count, fp);
+	fclose(fp);
+	return true;
+}
+
+void FilePointer::setCharArray(char *cArray, int size) {
+	fileStr = new unsigned char[size];
+	memcpy(fileStr, cArray, size * sizeof(unsigned char));
+}
+
+unsigned int FilePointer::getPos() {
+	return pointer;
+}
+
+void FilePointer::seekPointer(unsigned int ind) {
+	pointer = ind;
+}
+
+unsigned char FilePointer::getByte() {
+	unsigned int ret = fileStr[pointer];
+	pointer++;
+	return ret;
+}
+
+void FilePointer::fRead(char *dst, int byteSize) {
+	memcpy(dst, &fileStr[pointer], byteSize * sizeof(unsigned char));
+	pointer += byteSize;
+}
+
+unsigned int FilePointer::convertBYTEtoUINT() {
+	unsigned int ret = (fileStr[3 + pointer] << 24) | (fileStr[2 + pointer] << 16) |
+		(fileStr[1 + pointer] << 8) | (fileStr[0 + pointer]);
+	pointer += 4;
+	return ret;
 }
 
 unsigned int convertUCHARtoUINT(unsigned char *arr) {
@@ -154,46 +201,45 @@ void NodeRecord::createConnectionList(std::vector<ConnectionList>& cnLi) {
 	cnLi.push_back(cl);
 }
 
-void NodeRecord::set(FILE *fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi) {
-	EndOffset = convertBYTEtoUINT(fp);
-	NumProperties = convertBYTEtoUINT(fp);
-	PropertyListLen = convertBYTEtoUINT(fp);
-	classNameLen = fgetc(fp);
+void NodeRecord::set(FilePointer *fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi) {
+	EndOffset = fp->convertBYTEtoUINT();
+	NumProperties = fp->convertBYTEtoUINT();
+	PropertyListLen = fp->convertBYTEtoUINT();
+	classNameLen = fp->getByte();
 	className = new char[classNameLen + 1];
-	fread(className, sizeof(char), classNameLen, fp);
+	fp->fRead(className, classNameLen);
 	className[classNameLen] = '\0';
 	if (PropertyListLen > 0) {
 		Property = new unsigned char[PropertyListLen];
-		fread(Property, sizeof(unsigned char), PropertyListLen, fp);
+		fp->fRead((char*)Property, PropertyListLen);
 		searchName_Type(cn);
 		if (!strcmp(className, "C") && (!strcmp(nodeName[0], "OO") || !strcmp(nodeName[0], "OP"))) {
 			createConnectionList(cnLi);
 		}
 	}
 
-	fpos_t curpos = 0;
-	fgetpos(fp, &curpos);
+	unsigned int curpos = fp->getPos();
 	//現在のファイルポインタがEndOffsetより手前,かつ
 	//現ファイルポインタから4byteが全て0ではない場合, 子ノード有り
-	if (EndOffset > (unsigned int)(curpos) && convertBYTEtoUINT(fp) != 0) {
-		unsigned int topChildPointer = (unsigned int)(curpos);
+	if (EndOffset > curpos && fp->convertBYTEtoUINT() != 0) {
+		unsigned int topChildPointer = curpos;
 		unsigned int childEndOffset = 0;
 		//子ノードEndOffsetをたどり,個数カウント
 		do {
-			fseek(fp, (long)(sizeof(char) * -4), SEEK_CUR);//"convertBYTEtoUINT(fp) != 0"の分戻す
+			fp->seekPointer(fp->getPos() - 4);//"convertBYTEtoUINT() != 0"の分戻す
 			NumChildren++;
-			childEndOffset = convertBYTEtoUINT(fp);
-			fseek(fp, sizeof(char) * childEndOffset, SEEK_SET);
-		} while (EndOffset > childEndOffset && convertBYTEtoUINT(fp) != 0);
+			childEndOffset = fp->convertBYTEtoUINT();
+			fp->seekPointer(childEndOffset);
+		} while (EndOffset > childEndOffset && fp->convertBYTEtoUINT() != 0);
 		//カウントが終わったので最初の子ノードのファイルポインタに戻す
-		fseek(fp, sizeof(char) * topChildPointer, SEEK_SET);
+		fp->seekPointer(topChildPointer);
 		nodeChildren = new NodeRecord[NumChildren];
 		for (unsigned int i = 0; i < NumChildren; i++) {
 			nodeChildren[i].set(fp, cn, cnLi);
 		}
 	}
 	//読み込みが終了したのでEndOffsetへポインタ移動
-	fseek(fp, sizeof(char) * EndOffset, SEEK_SET);
+	fp->seekPointer(EndOffset);
 }
 
 NodeRecord::~NodeRecord() {
@@ -206,13 +252,13 @@ NodeRecord::~NodeRecord() {
 	aDELETE(nodeChildren);
 }
 
-bool FbxLoader::fileCheck(FILE *fp) {
+bool FbxLoader::fileCheck(FilePointer *fp) {
 
 	char *str2 = "Kaydara FBX binary";
 
 	int missCnt = 0;
 	for (int i = 0; i < Kaydara_FBX_binary + 1; i++) {
-		if ((char)fgetc(fp) != *str2) {
+		if ((char)fp->getByte() != *str2) {
 			missCnt++;
 			if (missCnt > 3) {
 				//ソフトによってスペルミスが有るのでとりあえず3文字以上異なる場合falseにする
@@ -225,30 +271,29 @@ bool FbxLoader::fileCheck(FILE *fp) {
 	//0-20バイト 『Kaydata FBX binary  [null]』
 	//21-22バイト 0x1a, 0x00
 	//23-26バイトまで(4バイト分): 符号なし整数,バージョンを表す
-	fseek(fp, sizeof(char) * 23, SEEK_SET);//バイナリではSEEK_ENDは不定
+	fp->seekPointer(23);//バイナリではSEEK_ENDは不定
 
 	return true;
 }
 
-void FbxLoader::searchVersion(FILE *fp) {
+void FbxLoader::searchVersion(FilePointer *fp) {
 	//バージョンは23-26バイトまで(4バイト分)リトルエンディアン(下の位から読んでいく)
-	version = convertBYTEtoUINT(fp);
+	version = fp->convertBYTEtoUINT();
 }
 
-void FbxLoader::readFBX(FILE *fp) {
-	fpos_t curpos = 0;
-	fgetpos(fp, &curpos);
+void FbxLoader::readFBX(FilePointer *fp) {
+	unsigned int curpos = fp->getPos();
 
 	unsigned int nodeCount = 0;
 	unsigned int endoffset = 0;
 
-	while (convertBYTEtoUINT(fp) != 0) {
-		fseek(fp, (long)(sizeof(char) * -4), SEEK_CUR);//"convertBYTEtoUINT(fp) != 0"の分戻す
+	while (fp->convertBYTEtoUINT() != 0) {
+		fp->seekPointer(fp->getPos() - 4);//"convertBYTEtoUINT() != 0"の分戻す
 		nodeCount++;
-		endoffset = convertBYTEtoUINT(fp);
-		fseek(fp, sizeof(char) * endoffset, SEEK_SET);
+		endoffset = fp->convertBYTEtoUINT();
+		fp->seekPointer(endoffset);
 	}
-	fseek(fp, (long)(sizeof(char) * curpos), SEEK_SET);
+	fp->seekPointer(curpos);
 
 	FbxRecord.classNameLen = 9;
 	FbxRecord.className = new char[FbxRecord.classNameLen + 1];
@@ -966,15 +1011,22 @@ FbxLoader::~FbxLoader() {
 }
 
 bool FbxLoader::setFbxFile(char *pass) {
-	FILE *fp = fopen(pass, "rb");
-	if (fp == NULL) {
-		return false;
-	}
+	FilePointer fp;
+	if (!fp.setFile(pass))return false;
+	if (!fileCheck(&fp))return false;
+	searchVersion(&fp);
+	readFBX(&fp);
+	getMesh();
+	if (NumMesh <= 0)getNoneMeshDeformer();
+	return true;
+}
 
-	if (!fileCheck(fp))return false;
-	searchVersion(fp);
-	readFBX(fp);
-	fclose(fp);
+bool FbxLoader::setBinaryInFbxFile(char *strArray, int size) {
+	FilePointer fp;
+	fp.setCharArray(strArray, size);
+	if (!fileCheck(&fp))return false;
+	searchVersion(&fp);
+	readFBX(&fp);
 	getMesh();
 	if (NumMesh <= 0)getNoneMeshDeformer();
 	return true;
