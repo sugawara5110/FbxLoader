@@ -7,7 +7,7 @@
 #include "DecompressDeflate.h"
 #include <string.h>
 
-const int DecompressDeflate::bitMask[] = {
+static const int bitMask[]{
 	0b0000000000000000,
 	0b0000000000000001,
 	0b0000000000000011,
@@ -27,13 +27,15 @@ const int DecompressDeflate::bitMask[] = {
 	0b1111111111111111
 };
 
-const unsigned short DecompressDeflate::dest[] = { 1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,
-257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577 };
+static const int byteArrayNumbit = 8;
+static const int LEFT_INV_BIT1 = 0b0101010101010101;
+static const int RIGHT_INV_BIT1 = 0b1010101010101010;
+static const int LEFT_INV_BIT2 = 0b0011001100110011;
+static const int RIGHT_INV_BIT2 = 0b1100110011001100;
+static const int LEFT_INV_BIT4 = 0b0000111100001111;
+static const int RIGHT_INV_BIT4 = 0b1111000011110000;
 
-const unsigned char DecompressDeflate::NumBit[] = { 0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,
-7,7,8,8,9,9,10,10,11,11,12,12,13,13 };
-
-unsigned short DecompressDeflate::intInversion(unsigned short ba, int numBit) {
+static unsigned short intInversion(unsigned short ba, int numBit) {
 	unsigned short oBa = 0;
 	const int baseNum = 16;
 	oBa = ((ba & LEFT_INV_BIT1) << 1) | ((ba & RIGHT_INV_BIT1) >> 1);
@@ -42,11 +44,72 @@ unsigned short DecompressDeflate::intInversion(unsigned short ba, int numBit) {
 	return ((oBa << 8) | (oBa >> 8)) >> (baseNum - numBit);
 }
 
-void DecompressDeflate::bitInversion(unsigned char *ba, unsigned int size) {
+static void bitInversion(unsigned char* ba, unsigned int size) {
 	for (unsigned int i = 0; i < size; i++) {
 		ba[i] = (unsigned char)intInversion((unsigned short)ba[i], 8);
 	}
 }
+
+static void getBit(unsigned long long* CurSearchBit, unsigned char* byteArray, unsigned char NumBit, unsigned short* outBinArr, bool firstRight) {
+	unsigned int baind = (unsigned int)(*CurSearchBit / byteArrayNumbit);//配列インデックス
+	unsigned int bitPos = (unsigned int)(*CurSearchBit % byteArrayNumbit);//要素内bit位置インデックス
+	unsigned char shiftBit = byteArrayNumbit * 3 - NumBit - bitPos;
+	*outBinArr = (((byteArray[baind] << 16) | (byteArray[baind + 1] << 8) |
+		byteArray[baind + 2]) >> shiftBit) & bitMask[NumBit];
+	if (firstRight) * outBinArr = intInversion(*outBinArr, NumBit);
+	*CurSearchBit += NumBit;
+}
+
+void HuffmanNode::setVal(unsigned short val, unsigned short bitArr, unsigned char numBit) {
+	if (numBit == 0) {//葉まで到達したら値を格納
+		Val = val;
+		return;
+	}
+	if (bitArr >> (numBit - 1) == 0) {
+		if (!bit0)bit0 = new HuffmanNode();
+		bit0->setVal(val, bitArr & bitMask[numBit - 1], numBit - 1);
+	}
+	else {
+		if (!bit1)bit1 = new HuffmanNode();
+		bit1->setVal(val, bitArr & bitMask[numBit - 1], numBit - 1);
+	}
+}
+
+unsigned short HuffmanNode::getVal(unsigned long long* curSearchBit, unsigned char* byteArray) {
+	if (!bit0 && !bit1) {//葉まで到達したら値を返す
+		return Val;
+	}
+	unsigned short outBin = 0;
+	getBit(curSearchBit, byteArray, 1, &outBin, false);
+	if (outBin == 0) {
+		return bit0->getVal(curSearchBit, byteArray);
+	}
+	else {
+		return bit1->getVal(curSearchBit, byteArray);
+	}
+}
+
+HuffmanNode::~HuffmanNode() {
+	s_DELETE(bit0);
+	s_DELETE(bit1);
+}
+
+void HuffmanTree::createTree(unsigned short* signArr, unsigned char* numSignArr, unsigned int arraySize) {
+	for (unsigned int i = 0; i < arraySize; i++) {
+		if (numSignArr[i] == 0)continue;//符号長0(符号無し)はスキップ
+		hn.setVal(i, signArr[i], numSignArr[i]);
+	}
+}
+
+unsigned short HuffmanTree::getVal(unsigned long long* curSearchBit, unsigned char* byteArray) {
+	return hn.getVal(curSearchBit, byteArray);
+}
+
+const unsigned short DecompressDeflate::dest[] = { 1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,
+257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577 };
+
+const unsigned char DecompressDeflate::NumBit[] = { 0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,
+7,7,8,8,9,9,10,10,11,11,12,12,13,13 };
 
 void DecompressDeflate::getLength(unsigned short val, unsigned short *len, unsigned char *bitlen) {
 	*len = 0;
@@ -97,18 +160,8 @@ void DecompressDeflate::DecompressLZSS(unsigned char *outArray, unsigned int *ou
 	*outIndex += MatchLen;
 }
 
-void DecompressDeflate::getBit(unsigned long long *CurSearchBit, unsigned char *byteArray, unsigned char NumBit, unsigned short *outBinArr, bool firstRight) {
-	unsigned int baind = (unsigned int)(*CurSearchBit / byteArrayNumbit);//配列インデックス
-	unsigned int bitPos = (unsigned int)(*CurSearchBit % byteArrayNumbit);//要素内bit位置インデックス
-	unsigned char shiftBit = byteArrayNumbit * 3 - NumBit - bitPos;
-	*outBinArr = (((byteArray[baind] << 16) | (byteArray[baind + 1] << 8) |
-		byteArray[baind + 2]) >> shiftBit) & bitMask[NumBit];
-	if (firstRight) *outBinArr = intInversion(*outBinArr, NumBit);
-	*CurSearchBit += NumBit;
-}
-
 void DecompressDeflate::createFixedHuffmanSign() {
-	for (unsigned int i = 0; i < 286; i++) {
+	for (unsigned int i = 0; i < NUMSTR; i++) {
 		if (0 <= i && i <= 143) {
 			strSign[i] = i + 48;
 			strNumSign[i] = 8;
@@ -126,10 +179,15 @@ void DecompressDeflate::createFixedHuffmanSign() {
 			strNumSign[i] = 8;
 		}
 	}
-	for (unsigned int i = 0; i < 30; i++) {
+	strTree = new HuffmanTree();
+	strTree->createTree(strSign, strNumSign, NUMSTR);
+
+	for (unsigned int i = 0; i < NUMLEN; i++) {
 		lenSign[i] = i;
 		lenNumSign[i] = 5;
 	}
+	lenTree = new HuffmanTree();
+	lenTree->createTree(lenSign, lenNumSign, NUMLEN);
 }
 
 void DecompressDeflate::SortIndex(unsigned short *sortedIndex, unsigned char *hclens, unsigned int size) {
@@ -203,7 +261,7 @@ void DecompressDeflate::CreateSign(unsigned short *clens, unsigned char *hclens,
 	}
 }
 
-void DecompressDeflate::createCustomHuffmanSign(unsigned long long *curSearchBit, unsigned char *byteArray) {
+void DecompressDeflate::createCustomHuffmanSign(unsigned long long* curSearchBit, unsigned char* byteArray) {
 	unsigned short HLIT = 0;//文字/一致長符号の個数5bit
 	unsigned short HDIST = 0;//距離符号の個数5bit
 	unsigned short HCLEN = 0;//符号長表の符号長表のサイズ4bit
@@ -245,65 +303,56 @@ void DecompressDeflate::createCustomHuffmanSign(unsigned long long *curSearchBit
 
 	//文字/一致長符号長表,距離符号長表生成の為の符号表生成
 	CreateSign(clens, hclens, SortedIndex, NumSign);
+	HuffmanTree clensTree;
+	clensTree.createTree(clens, hclens, NumSign);
 
 	//文字/一致長符号長表,距離符号長表生成
 	unsigned short strSigLen = HLIT + 257;
 	unsigned short destSigLen = HDIST + 1;
-	unsigned char *sigLenList = new unsigned char[strSigLen + destSigLen];
-	unsigned short firstIndex = 0;
-	while (hclens[SortedIndex[firstIndex++]] == 0);
-	firstIndex--;
+	unsigned char* sigLenList = new unsigned char[strSigLen + destSigLen];
 	unsigned short prevBit = 0;
 	unsigned int sigLenInd = 0;
 	while (sigLenInd < (unsigned int)(strSigLen + destSigLen)) {
-		for (unsigned int i1 = firstIndex; i1 < NumSign; i1++) {//bit探索
-			unsigned short outBin = 0;
-			getBit(curSearchBit, byteArray, hclens[SortedIndex[i1]], &outBin, false);//符号を読み込む
-			if (clens[SortedIndex[i1]] == outBin) {//一致した場合
-				if (SortedIndex[i1] == 16) {
-					//直前に取り出された符号長を3~6回繰り返す。16の後の2bit 00=3回 11=6回繰り返す
-					unsigned short obit = 0;
-					getBit(curSearchBit, byteArray, 2, &obit, true);//反復長を取り出す符号ではない為,通常順序
-					for (unsigned short i16 = 0; i16 < obit + 3; i16++)sigLenList[sigLenInd++] = (unsigned char)prevBit;
-					break;
-				}
-				if (SortedIndex[i1] == 17) {
-					//0符号を3~10回繰り返す17の後3bit
-					unsigned short obit = 0;
-					getBit(curSearchBit, byteArray, 3, &obit, true);
-					for (unsigned short i17 = 0; i17 < obit + 3; i17++)sigLenList[sigLenInd++] = 0;
-					break;
-				}
-				if (SortedIndex[i1] == 18) {
-					//0符号を11~138回繰り返す18の後7bit
-					unsigned short obit = 0;
-					getBit(curSearchBit, byteArray, 7, &obit, true);
-					for (unsigned short i18 = 0; i18 < obit + 11; i18++)sigLenList[sigLenInd++] = 0;
-					break;
-				}
-				//符号長の場合
-				sigLenList[sigLenInd++] = (unsigned char)SortedIndex[i1];
-				prevBit = SortedIndex[i1];
-				break;
-			}
-			(*curSearchBit) -= hclens[SortedIndex[i1]];//一致しなかった場合読み込んだ分のbit位置を戻す
+		unsigned short val = clensTree.getVal(curSearchBit, byteArray);
+		if (val == 16) {
+			//直前に取り出された符号長を3~6回繰り返す。16の後の2bit 00=3回 11=6回繰り返す
+			unsigned short obit = 0;
+			getBit(curSearchBit, byteArray, 2, &obit, true);//反復長を取り出す符号ではない為,通常順序
+			for (unsigned short i16 = 0; i16 < obit + 3; i16++)sigLenList[sigLenInd++] = (unsigned char)prevBit;
+		}
+		if (val == 17) {
+			//0符号を3~10回繰り返す17の後3bit
+			unsigned short obit = 0;
+			getBit(curSearchBit, byteArray, 3, &obit, true);
+			for (unsigned short i17 = 0; i17 < obit + 3; i17++)sigLenList[sigLenInd++] = 0;
+		}
+		if (val == 18) {
+			//0符号を11~138回繰り返す18の後7bit
+			unsigned short obit = 0;
+			getBit(curSearchBit, byteArray, 7, &obit, true);
+			for (unsigned short i18 = 0; i18 < obit + 11; i18++)sigLenList[sigLenInd++] = 0;
+		}
+		if (val < 16) {
+			//符号長の場合
+			sigLenList[sigLenInd++] = (unsigned char)val;
+			prevBit = val;
 		}
 	}
 
 	//文字/一致長符号長表,距離符号長表からそれぞれの符号表を生成する
 	//文字/一致長符号長表,距離符号長表に分割する
-	unsigned char *strSigLenList = sigLenList;
-	unsigned char *destSigLenList = &sigLenList[strSigLen];
+	unsigned char* strSigLenList = sigLenList;
+	unsigned char* destSigLenList = &sigLenList[strSigLen];
 
-	unsigned char *strSigLenListCopy = new unsigned char[strSigLen];
-	unsigned char *destSigLenListCopy = new unsigned char[destSigLen];
+	unsigned char* strSigLenListCopy = new unsigned char[strSigLen];
+	unsigned char* destSigLenListCopy = new unsigned char[destSigLen];
 	memcpy(strSigLenListCopy, strSigLenList, strSigLen * sizeof(unsigned char));
 	memcpy(destSigLenListCopy, destSigLenList, destSigLen * sizeof(unsigned char));
 
-	unsigned short *strSigLenListSortedIndex = new unsigned short[strSigLen];
-	unsigned short *destSigLenListSortedIndex = new unsigned short[destSigLen];
-	unsigned short *strSigList = new unsigned short[strSigLen];
-	unsigned short *destSigList = new unsigned short[destSigLen];
+	unsigned short* strSigLenListSortedIndex = new unsigned short[strSigLen];
+	unsigned short* destSigLenListSortedIndex = new unsigned short[destSigLen];
+	unsigned short* strSigList = new unsigned short[strSigLen];
+	unsigned short* destSigList = new unsigned short[destSigLen];
 	//初期化
 	for (unsigned short i = 0; i < strSigLen; i++)strSigLenListSortedIndex[i] = i;
 	for (unsigned short i = 0; i < destSigLen; i++)destSigLenListSortedIndex[i] = i;
@@ -319,6 +368,11 @@ void DecompressDeflate::createCustomHuffmanSign(unsigned long long *curSearchBit
 	memcpy(lenSign, destSigList, destSigLen * sizeof(unsigned short));
 	memcpy(lenNumSign, destSigLenList, destSigLen * sizeof(unsigned char));
 
+	strTree = new HuffmanTree();
+	strTree->createTree(strSign, strNumSign, strSigLen);
+	lenTree = new HuffmanTree();
+	lenTree->createTree(lenSign, lenNumSign, destSigLen);
+
 	a_DELETE(sigLenList);
 	a_DELETE(strSigLenListSortedIndex);
 	a_DELETE(destSigLenListSortedIndex);
@@ -328,54 +382,40 @@ void DecompressDeflate::createCustomHuffmanSign(unsigned long long *curSearchBit
 	a_DELETE(destSigLenListCopy);
 }
 
-void DecompressDeflate::DecompressHuffman(unsigned long long *curSearchBit, unsigned char *byteArray, unsigned int *outIndex, unsigned char *outArray) {
+void DecompressDeflate::DecompressHuffman(unsigned long long* curSearchBit, unsigned char* byteArray, unsigned int* outIndex, unsigned char* outArray) {
 	//符号範囲探索
 	bool roop = true;
 	while (roop) {
-		for (unsigned int val = 0; val < 286; val++) {
-			unsigned short outBin = 0;
-			getBit(curSearchBit, byteArray, strNumSign[val], &outBin, false);//符号を読み込む,符号なのでビッグエンディアン
-			if (strNumSign[val] > 0 && strSign[val] == outBin) {//一致した場合
-				if (val <= 255) {
-					//0~255の値はそのまま置換無しでoutArray代入
-					outArray[(*outIndex)++] = val;//置換無しで出力(1byte)
-					break;
-				}
-				if (val == 256) {
-					roop = false;
-					break;
-				}
-				if (256 < val) {
-					//文字一致長取得//257~264は拡張ビット無し
-					unsigned char bitlen = 0;
-					unsigned short MatchLen = 0; //取り出した一致長
-					getLength(val, &MatchLen, &bitlen);
-					unsigned short outExpansionBit = 0;
-					getBit(curSearchBit, byteArray, bitlen, &outExpansionBit, true);//拡張ビット読み込み,数値なのでリトルエンディアン
-					MatchLen += outExpansionBit;//拡張ビット有った場合, 一致長に足す
-					//距離値処理
-					for (unsigned int destVal = 0; destVal < 30; destVal++) {
-						unsigned short lenBin = 0;
-						getBit(curSearchBit, byteArray, lenNumSign[destVal], &lenBin, false);
-						if (lenNumSign[destVal] > 0 && lenSign[destVal] == lenBin) {
-							unsigned short destLen = 0;
-							unsigned char destbitlen = 0;
-							getDestLength(destVal, &destLen, &destbitlen);
-							unsigned short outExpansionlenBit = 0;
-							getBit(curSearchBit, byteArray, destbitlen, &outExpansionlenBit, true);
-							destLen += outExpansionlenBit;
-							//取り出した一致長, 距離から値を読み出す
-							DecompressLZSS(outArray, outIndex, MatchLen, destLen);
-							break;
-						}
-						(*curSearchBit) -= lenNumSign[destVal];//一致しなかった場合読み込んだ分のbit位置を戻す
-					}
-					break;
-				}
-			}
-			(*curSearchBit) -= strNumSign[val];//一致しなかった場合読み込んだ分のbit位置を戻す
+		unsigned int val = strTree->getVal(curSearchBit, byteArray);
+		if (val <= 255) {
+			//0~255の値はそのまま置換無しでoutArray代入
+			outArray[(*outIndex)++] = val;//置換無しで出力(1byte)
+		}
+		if (val == 256) {
+			roop = false;
+		}
+		if (256 < val) {
+			//文字一致長取得//257~264は拡張ビット無し
+			unsigned char bitlen = 0;
+			unsigned short MatchLen = 0; //取り出した一致長
+			getLength(val, &MatchLen, &bitlen);
+			unsigned short outExpansionBit = 0;
+			getBit(curSearchBit, byteArray, bitlen, &outExpansionBit, true);//拡張ビット読み込み,数値なのでリトルエンディアン
+			MatchLen += outExpansionBit;//拡張ビット有った場合, 一致長に足す
+			//距離値処理
+			unsigned int destVal = lenTree->getVal(curSearchBit, byteArray);
+			unsigned short destLen = 0;
+			unsigned char destbitlen = 0;
+			getDestLength(destVal, &destLen, &destbitlen);
+			unsigned short outExpansionlenBit = 0;
+			getBit(curSearchBit, byteArray, destbitlen, &outExpansionlenBit, true);
+			destLen += outExpansionlenBit;
+			//取り出した一致長, 距離から値を読み出す
+			DecompressLZSS(outArray, outIndex, MatchLen, destLen);
 		}
 	}
+	s_DELETE(strTree);
+	s_DELETE(lenTree);
 }
 
 void DecompressDeflate::Uncompress(unsigned long long *curSearchBit, unsigned char *byteArray, unsigned int *outIndex, unsigned char *outArray) {

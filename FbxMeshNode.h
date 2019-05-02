@@ -69,14 +69,14 @@ private:
 	friend FbxMeshNode;
 	friend FbxLoader;
 	//ツリー情報
-	char *name = nullptr;//自身の名前
+	char* name = nullptr;//自身の名前
 	unsigned int NumChild = 0;
-	char *childName[100] = { nullptr };//子DeformerName
-	Deformer *parentNode = nullptr;//EvaluateGlobalTransformの計算に使う
+	char* childName[100] = { nullptr };//子DeformerName
+	Deformer* parentNode = nullptr;//EvaluateGlobalTransformの計算に使う
 
 	int IndicesCount = 0;//このボーンに影響を受ける頂点インデックス数
-	int *Indices = nullptr;//このボーンに影響を受ける頂点のインデックス配列
-	double *Weights = nullptr;//このボーンに影響を受ける頂点のウエイト配列
+	int* Indices = nullptr;//このボーンに影響を受ける頂点のインデックス配列
+	double* Weights = nullptr;//このボーンに影響を受ける頂点のウエイト配列
 	double TransformMatrix[16] = { 0 };//中心位置
 	double TransformLinkMatrix[16] = { 0 };//初期姿勢行列(絶対位置)
 	double LocalPose[16] = { 0 };
@@ -95,7 +95,7 @@ private:
 	double CalDetMat4x4(double mat[16]);
 	void MatrixInverse(double outmat[16], double mat[16]);
 	void VectorMatrixMultiply(double inoutvec[3], double mat[16]);
-	double *SubEvaluateGlobalTransform(int64_t time);
+	double* SubEvaluateGlobalTransform(int64_t time);
 
 public:
 	~Deformer() {
@@ -104,17 +104,21 @@ public:
 		aDELETE(Weights);
 		for (int i = 0; i < 100; i++)aDELETE(childName[i]);
 	}
-	char *getName();
+	char* getName();
 	int getIndicesCount();
-	int *getIndices();
-	double *getWeights();
+	int* getIndices();
+	double* getWeights();
 	double getTransformLinkMatrix(unsigned int y, unsigned int x);
+	double* getTransformLinkMatrixDirect() { return TransformLinkMatrix; }
 	int64_t getTimeFRAMES60(int frame);
 	int64_t getTimeFRAMES30(int frame);
 	void EvaluateLocalTransform(int64_t time);
 	void EvaluateGlobalTransform(int64_t time);
 	double getEvaluateLocalTransform(unsigned int y, unsigned int x);
 	double getEvaluateGlobalTransform(unsigned int y, unsigned int x);
+	double* getLocalPose() { return LocalPose; }
+	double* getGlobalPose() { return GlobalPose; }
+	Deformer* getParentNode() { return parentNode; }
 };
 
 class FbxMaterialNode {
