@@ -716,11 +716,11 @@ void FbxLoader::getMesh() {
 	unsigned int mecnt = 0;
 	unsigned int matcnt = 0;
 	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
-		NodeRecord *n1 = rootNode->connectionNode.data()[i];
+		NodeRecord* n1 = rootNode->connectionNode.data()[i];
 		if (!strcmp(n1->className, "Model") &&
 			!strcmp(n1->nodeName[1], "Mesh")) {
 			for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
-				NodeRecord *n2 = n1->connectionNode.data()[i1];
+				NodeRecord* n2 = n1->connectionNode.data()[i1];
 				getGeometry(n2, &Mesh[mecnt]);
 				getMaterial(n2, &Mesh[mecnt], &matcnt);
 			}
@@ -731,19 +731,19 @@ void FbxLoader::getMesh() {
 
 	//rootBoneê∂ê¨, nameìoò^(ñ{óàDeformerÇ∂Ç·Ç»Ç¢ÇÃÇ≈ï Ç…ê∂ê¨)
 	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
-		NodeRecord *n1 = rootNode->connectionNode.data()[i];
+		NodeRecord* n1 = rootNode->connectionNode.data()[i];
 		if (!strcmp(n1->className, "Model") && n1->nodeName[1]) {
-			if (!strcmp(n1->nodeName[1], "Root") || !strcmp(n1->nodeName[1], "Limb")) {
+			if (!strcmp(n1->nodeName[1], "Root") || !strcmp(n1->nodeName[1], "Limb") || !strcmp(n1->nodeName[1], "Null")) {
 				for (unsigned int j = 0; j < NumMesh; j++) {
 					Mesh[j].rootDeformer = new Deformer();
-					Deformer *defo = Mesh[j].rootDeformer;
+					Deformer* defo = Mesh[j].rootDeformer;
 					int len = (int)strlen(n1->nodeName[0]);
 					defo->name = new char[len + 1];
 					strcpy(defo->name, n1->nodeName[0]);
 					getAnimation(n1, defo);
 					//éqÉmÅ[ÉhÇÃModelNameìoò^
 					for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
-						NodeRecord *n2 = n1->connectionNode.data()[i1];
+						NodeRecord* n2 = n1->connectionNode.data()[i1];
 						if (!strcmp(n2->className, "Model")) {
 							int ln = (int)strlen(n2->nodeName[0]);
 							defo->childName[defo->NumChild] = new char[ln + 1];
@@ -751,6 +751,7 @@ void FbxLoader::getMesh() {
 						}
 					}
 				}
+				break;
 			}
 		}
 	}
@@ -758,7 +759,7 @@ void FbxLoader::getMesh() {
 	//UVêÆóÒ
 	for (unsigned int i = 0; i < NumMesh; i++) {
 		for (int i1 = 0; i1 < Mesh[i].NumMaterial; i1++) {
-			LayerElement *uv = Mesh[i].UV[i1];
+			LayerElement* uv = Mesh[i].UV[i1];
 			uv->AlignedUV = new double[uv->NumUVindex * 2];
 			unsigned int cnt = 0;
 			for (unsigned int i2 = 0; i2 < uv->NumUVindex; i2++) {
@@ -813,9 +814,9 @@ void FbxLoader::getNoneMeshSubDeformer(NodeRecord *node) {
 
 void FbxLoader::getNoneMeshDeformer() {
 	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
-		NodeRecord *n1 = rootNode->connectionNode.data()[i];
+		NodeRecord* n1 = rootNode->connectionNode.data()[i];
 		if (!strcmp(n1->className, "Model") && n1->nodeName[1]) {
-			if (!strcmp(n1->nodeName[1], "Root") || !strcmp(n1->nodeName[1], "Limb")) {
+			if (!strcmp(n1->nodeName[1], "Root") || !strcmp(n1->nodeName[1], "Limb") || !strcmp(n1->nodeName[1], "Null")) {
 				rootDeformer = new Deformer();
 				int len = (int)strlen(n1->nodeName[0]);
 				rootDeformer->name = new char[len + 1];
@@ -823,7 +824,7 @@ void FbxLoader::getNoneMeshDeformer() {
 				getAnimation(n1, rootDeformer);
 				//éqÉmÅ[ÉhÇÃModelNameìoò^
 				for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
-					NodeRecord *n2 = n1->connectionNode.data()[i1];
+					NodeRecord* n2 = n1->connectionNode.data()[i1];
 					if (!strcmp(n2->className, "Model")) {
 						int ln = (int)strlen(n2->nodeName[0]);
 						rootDeformer->childName[rootDeformer->NumChild] = new char[ln + 1];
@@ -832,6 +833,7 @@ void FbxLoader::getNoneMeshDeformer() {
 						getNoneMeshSubDeformer(n2);
 					}
 				}
+				break;
 			}
 		}
 	}
