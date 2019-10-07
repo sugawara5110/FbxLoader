@@ -266,7 +266,7 @@ void DecompressDeflate::createCustomHuffmanSign(unsigned long long* curSearchBit
 	unsigned short HDIST = 0;//距離符号の個数5bit
 	unsigned short HCLEN = 0;//符号長表の符号長表のサイズ4bit
 	unsigned char MaxBit[3] = { 5,5,4 };
-	unsigned short tmp[3] = { 0 };
+	unsigned short tmp[3] = {};
 	//HLIT、HDIST、HCLEN、符号長表の符号長表、拡張ビットは値なので右詰め,
 	//符号は左詰め
 	for (unsigned int i = 0; i < 3; i++) {
@@ -290,8 +290,8 @@ void DecompressDeflate::createCustomHuffmanSign(unsigned long long* curSearchBit
 		hclens[SignInd[i]] = (unsigned char)sl;
 	}
 	//符号長が小さい順に並べる, (0個以外)
-	unsigned short SortedIndex[NumSign] = { 0 };//ソート後のインデックス配列
-	unsigned char hclensCopy[NumSign] = { 0 };
+	unsigned short SortedIndex[NumSign] = {};//ソート後のインデックス配列
+	unsigned char hclensCopy[NumSign] = {};
 	memcpy(hclensCopy, hclens, NumSign * sizeof(unsigned char));
 	for (int i = 0; i < NumSign; i++)SortedIndex[i] = i;//ソートインデックス初期化
 	//インデックスソート

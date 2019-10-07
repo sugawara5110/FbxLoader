@@ -164,23 +164,23 @@ int64_t Deformer::getTimeFRAMES30(int frame) {
 }
 
 void Deformer::EvaluateLocalTransform(int64_t time) {
-	double sca[16] = { 0 };
+	double sca[16] = {};
 	MatrixScaling(sca, Scaling[0].getKeyValue(time), Scaling[1].getKeyValue(time), Scaling[2].getKeyValue(time));
-	double rotx[16] = { 0 };
+	double rotx[16] = {};
 	MatrixRotationX(rotx, Rotation[0].getKeyValue(time));
-	double roty[16] = { 0 };
+	double roty[16] = {};
 	MatrixRotationY(roty, Rotation[1].getKeyValue(time));
-	double rotz[16] = { 0 };
+	double rotz[16] = {};
 	MatrixRotationZ(rotz, Rotation[2].getKeyValue(time));
-	double mov[16] = { 0 };
+	double mov[16] = {};
 	MatrixTranslation(mov, Translation[0].getKeyValue(time), Translation[1].getKeyValue(time), Translation[2].getKeyValue(time));
 
-	double rotxy[16] = { 0 };
+	double rotxy[16] = {};
 	MatrixMultiply(rotxy, rotx, roty);
-	double rotxyz[16] = { 0 };
+	double rotxyz[16] = {};
 	MatrixMultiply(rotxyz, rotxy, rotz);
 
-	double scrot[16] = { 0 };
+	double scrot[16] = {};
 	MatrixMultiply(scrot, sca, rotxyz);
 	MatrixMultiply(LocalPose, scrot, mov);
 }
@@ -214,7 +214,7 @@ FbxMeshNode::~FbxMeshNode() {
 	aDELETE(vertices);
 	aDELETE(polygonVertices);
 	aDELETE(PolygonSize);
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < NumLayerElement; i++) {
 		sDELETE(material[i]);
 		sDELETE(Material[i]);
 		sDELETE(Normals[i]);

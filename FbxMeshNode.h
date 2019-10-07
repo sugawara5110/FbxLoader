@@ -77,10 +77,10 @@ private:
 	int IndicesCount = 0;//このボーンに影響を受ける頂点インデックス数
 	int* Indices = nullptr;//このボーンに影響を受ける頂点のインデックス配列
 	double* Weights = nullptr;//このボーンに影響を受ける頂点のウエイト配列
-	double TransformMatrix[16] = { 0 };//中心位置
-	double TransformLinkMatrix[16] = { 0 };//初期姿勢行列(絶対位置)
-	double LocalPose[16] = { 0 };
-	double GlobalPose[16] = { 0 };
+	double TransformMatrix[16] = {};//中心位置
+	double TransformLinkMatrix[16] = {};//初期姿勢行列(絶対位置)
+	double LocalPose[16] = {};
+	double GlobalPose[16] = {};
 
 	AnimationCurve Translation[3];
 	AnimationCurve Rotation[3];
@@ -126,12 +126,12 @@ class FbxMaterialNode {
 private:
 	friend FbxMeshNode;
 	friend FbxLoader;
-	double Diffuse[3] = { 0 };
-	double Specular[3] = { 0 };
-	double Ambient[3] = { 0 };
-	char *MaterialName = nullptr;
-	char *textureDifName = nullptr;
-	char *textureNorName = nullptr;
+	double Diffuse[3] = {};
+	double Specular[3] = {};
+	double Ambient[3] = {};
+	char* MaterialName = nullptr;
+	char* textureDifName = nullptr;
+	char* textureNorName = nullptr;
 
 public:
 	~FbxMaterialNode() {
@@ -145,33 +145,34 @@ class FbxMeshNode {
 
 private:
 	friend FbxLoader;
-	char *name = nullptr;
-	double *vertices = nullptr;//頂点
+	char* name = nullptr;
+	double* vertices = nullptr;//頂点
 	unsigned int NumVertices = 0;//頂点数, xyzで1組
-	int *polygonVertices = nullptr;//頂点インデックス
+	int* polygonVertices = nullptr;//頂点インデックス
 	unsigned int NumPolygonVertices = 0;//頂点インデックス数
 	unsigned int NumPolygon = 0;//ポリゴン数
-	unsigned int *PolygonSize = nullptr;//各ポリゴン頂点インデックス数
+	unsigned int* PolygonSize = nullptr;//各ポリゴン頂点インデックス数
 	int NumMaterial = 0;//マテリアル数
-	FbxMaterialNode *material[5] = { nullptr };
-	LayerElement *Material[5] = { nullptr };
-	LayerElement *Normals[5] = { nullptr };
-	LayerElement *UV[5] = { nullptr };
+	const static int NumLayerElement = 10;
+	FbxMaterialNode* material[NumLayerElement] = { nullptr };
+	LayerElement* Material[NumLayerElement] = { nullptr };
+	LayerElement* Normals[NumLayerElement] = { nullptr };
+	LayerElement* UV[NumLayerElement] = { nullptr };
 	unsigned int NumDeformer = 0;
-	Deformer *deformer[256] = { nullptr };
-	Deformer *rootDeformer = nullptr;
+	Deformer* deformer[256] = { nullptr };
+	Deformer* rootDeformer = nullptr;
 
 public:
 	~FbxMeshNode();
-	char *getName();
+	char* getName();
 
 	//頂点
 	unsigned int getNumVertices();
-	double *getVertices();
+	double* getVertices();
 
 	//頂点インデックス
 	unsigned int getNumPolygonVertices();
-	int *getPolygonVertices();
+	int* getPolygonVertices();
 
 	//ポリゴン
 	unsigned int getNumPolygon();
@@ -179,33 +180,33 @@ public:
 	unsigned int getNumMaterial();
 
 	//Material
-	char *getMaterialName(unsigned int layerIndex = 0);
-	char *getMaterialMappingInformationType(unsigned int layerIndex = 0);
+	char* getMaterialName(unsigned int layerIndex = 0);
+	char* getMaterialMappingInformationType(unsigned int layerIndex = 0);
 	int getMaterialNoOfPolygon(unsigned int polygonNo, unsigned int layerIndex = 0);
-	char *getDiffuseTextureName(unsigned int Index);
-	char *getNormalTextureName(unsigned int Index);
+	char* getDiffuseTextureName(unsigned int Index);
+	char* getNormalTextureName(unsigned int Index);
 	double getDiffuseColor(unsigned int Index, unsigned int ColIndex);
 	double getSpecularColor(unsigned int Index, unsigned int ColIndex);
 	double getAmbientColor(unsigned int Index, unsigned int ColIndex);
 
 	//Normal
 	unsigned int getNumNormal(unsigned int layerIndex = 0);
-	char *getNormalName(unsigned int layerIndex = 0);
-	char *getNormalMappingInformationType(unsigned int layerIndex = 0);
-	double *getNormal(unsigned int layerIndex = 0);
+	char* getNormalName(unsigned int layerIndex = 0);
+	char* getNormalMappingInformationType(unsigned int layerIndex = 0);
+	double* getNormal(unsigned int layerIndex = 0);
 
 	//UV
 	unsigned int getNumUV(unsigned int layerIndex = 0);
-	char *getUVName(unsigned int layerIndex = 0);
-	char *getUVMappingInformationType(unsigned int layerIndex = 0);
-	double *getUV(unsigned int layerIndex = 0);
+	char* getUVName(unsigned int layerIndex = 0);
+	char* getUVMappingInformationType(unsigned int layerIndex = 0);
+	double* getUV(unsigned int layerIndex = 0);
 	unsigned int getNumUVindex(unsigned int layerIndex = 0);
-	int *getUVindex(unsigned int layerIndex = 0);
-	double *getAlignedUV(unsigned int layerIndex = 0);
+	int* getUVindex(unsigned int layerIndex = 0);
+	double* getAlignedUV(unsigned int layerIndex = 0);
 
 	//Deformer
 	unsigned int getNumDeformer();
-	Deformer *getDeformer(unsigned int index);
+	Deformer* getDeformer(unsigned int index);
 };
 
 #endif

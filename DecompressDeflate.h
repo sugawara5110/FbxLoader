@@ -43,10 +43,10 @@ class DecompressDeflate {
 private:
 	static const unsigned short dest[];
 	static const unsigned char NumBit[];
-	unsigned short strSign[NUMSTR] = { 0 };
-	unsigned char strNumSign[NUMSTR] = { 0 };
-	unsigned short lenSign[NUMLEN] = { 0 };
-	unsigned char lenNumSign[NUMLEN] = { 0 };
+	unsigned short strSign[NUMSTR] = {};
+	unsigned char strNumSign[NUMSTR] = {};
+	unsigned short lenSign[NUMLEN] = {};
+	unsigned char lenNumSign[NUMLEN] = {};
 	HuffmanTree* strTree = nullptr;
 	HuffmanTree* lenTree = nullptr;
 

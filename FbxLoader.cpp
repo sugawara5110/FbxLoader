@@ -268,7 +268,7 @@ bool FbxLoader::fileCheck(FilePointer *fp) {
 		}
 		str2++;
 	}
-	//0-20バイト 『Kaydata FBX binary  [null]』
+	//0-20バイト 『Kaydara FBX binary  [null]』
 	//21-22バイト 0x1a, 0x00
 	//23-26バイトまで(4バイト分): 符号なし整数,バージョンを表す
 	fp->seekPointer(23);//バイナリではSEEK_ENDは不定
@@ -420,25 +420,23 @@ void FbxLoader::getLayerElementSub(NodeRecord *node, LayerElement *le) {
 	}
 }
 
-void FbxLoader::getLayerElement(NodeRecord *node, FbxMeshNode *mesh) {
+void FbxLoader::getLayerElement(NodeRecord* node, FbxMeshNode* mesh) {
 	if (!strcmp(node->className, "LayerElementMaterial")) {
 		int No = convertUCHARtoINT32(&node->Property[1]);//たぶんレイヤーNo取得
 		mesh->Material[No] = new LayerElement();
-		LayerElement *mat = mesh->Material[No];
-		int Numl = No + 1;
-		if (Numl > mesh->NumMaterial)mesh->NumMaterial = Numl;
+		LayerElement* mat = mesh->Material[No];
 		getLayerElementSub(node, mat);
 	}
 	if (!strcmp(node->className, "LayerElementNormal")) {
 		int No = convertUCHARtoINT32(&node->Property[1]);
 		mesh->Normals[No] = new LayerElement();
-		LayerElement *nor = mesh->Normals[No];
+		LayerElement* nor = mesh->Normals[No];
 		getLayerElementSub(node, nor);
 	}
 	if (!strcmp(node->className, "LayerElementUV")) {
 		int No = convertUCHARtoINT32(&node->Property[1]);
 		mesh->UV[No] = new LayerElement();
-		LayerElement *uv = mesh->UV[No];
+		LayerElement* uv = mesh->UV[No];
 		getLayerElementSub(node, uv);
 	}
 }
@@ -724,6 +722,7 @@ void FbxLoader::getMesh() {
 				getGeometry(n2, &Mesh[mecnt]);
 				getMaterial(n2, &Mesh[mecnt], &matcnt);
 			}
+			Mesh[mecnt].NumMaterial = matcnt;
 			mecnt++;
 			matcnt = 0;
 		}
@@ -760,6 +759,7 @@ void FbxLoader::getMesh() {
 	for (unsigned int i = 0; i < NumMesh; i++) {
 		for (int i1 = 0; i1 < Mesh[i].NumMaterial; i1++) {
 			LayerElement* uv = Mesh[i].UV[i1];
+			if (uv == nullptr)break;
 			uv->AlignedUV = new double[uv->NumUVindex * 2];
 			unsigned int cnt = 0;
 			for (unsigned int i2 = 0; i2 < uv->NumUVindex; i2++) {
@@ -1054,7 +1054,7 @@ unsigned int FbxLoader::getNumNoneMeshDeformer() {
 	return NumDeformer;
 }
 
-Deformer *FbxLoader::getNoneMeshDeformer(unsigned int index) {
+Deformer* FbxLoader::getNoneMeshDeformer(unsigned int index) {
 	return deformer[index];
 }
 
