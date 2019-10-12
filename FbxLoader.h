@@ -52,6 +52,8 @@ class ConnectionList {
 public:
 	int64_t ChildID = -1;
 	int64_t ParentID = -1;
+	//↓ChildIDに対して
+	textureType texType;
 };
 
 class NodeRecord {
@@ -64,8 +66,8 @@ private:
 	unsigned int NumProperties = 0;//プロパティの数
 	unsigned int PropertyListLen = 0;//プロパティリストの大きさ(byte)
 	unsigned char classNameLen = 0;
-	char *className = nullptr;
-	unsigned char *Property = nullptr;//(型type, そのdataの順で並んでる) * プロパティの数
+	char* className = nullptr;
+	unsigned char* Property = nullptr;//(型type, そのdataの順で並んでる) * プロパティの数
 	//型type種類別のdata内容 (型typeは1byte)
 	//プリミティブ型
 	//Y:2byte 符号付き整数型
@@ -96,16 +98,17 @@ private:
 	//Data:    Length byte
 	//の順で並んでる
 
-	char *nodeName[NUMNODENAME] = { nullptr };
+	textureType texType;
+	char* nodeName[NUMNODENAME] = { nullptr };
 	unsigned int NumChildren = 0;
-	NodeRecord *nodeChildren = nullptr;//{}内のノード, NodeRecord実体配列用
+	NodeRecord* nodeChildren = nullptr;//{}内のノード, NodeRecord実体配列用
 
 	int64_t thisConnectionID = -1;
 	std::vector<NodeRecord*> connectionNode;//NodeRecordポインタ配列用
 
 	void searchName_Type(std::vector<ConnectionNo>& cn);
-	void createConnectionList(std::vector<ConnectionList>& cnLi);
-	void set(FilePointer *fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi);
+	void createConnectionList(std::vector<ConnectionList>& cnLi, char* nodeName1);
+	void set(FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi);
 	~NodeRecord();
 };
 

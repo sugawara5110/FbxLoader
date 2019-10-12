@@ -15,6 +15,16 @@
 class FbxLoader;
 class FbxMeshNode;
 class Deformer;
+class FbxMaterialNode;
+
+class textureType {
+public:
+	bool NormalMap = false;
+	bool DiffuseColor = false;
+	bool SpecularColor = false;
+	bool SpecularFactor = false;
+	bool EmissiveFactor = false;
+};
 
 class LayerElement {
 
@@ -121,6 +131,23 @@ public:
 	Deformer* getParentNode() { return parentNode; }
 };
 
+class TextureName {
+
+private:
+	friend FbxMeshNode;
+	friend FbxLoader;
+	friend FbxMaterialNode;
+
+	char* name = nullptr;
+	textureType type;
+	char* UVname = nullptr;
+
+	~TextureName() {
+		aDELETE(name);
+		aDELETE(UVname);
+	}
+};
+
 class FbxMaterialNode {
 
 private:
@@ -130,14 +157,13 @@ private:
 	double Specular[3] = {};
 	double Ambient[3] = {};
 	char* MaterialName = nullptr;
-	char* textureDifName = nullptr;
-	char* textureNorName = nullptr;
+	const static int numTex = 10;
+	TextureName textureDifName[numTex];
+	TextureName textureNorName[numTex];
 
 public:
 	~FbxMaterialNode() {
 		aDELETE(MaterialName);
-		aDELETE(textureDifName);
-		aDELETE(textureNorName);
 	}
 };
 
@@ -183,8 +209,11 @@ public:
 	char* getMaterialName(unsigned int layerIndex = 0);
 	char* getMaterialMappingInformationType(unsigned int layerIndex = 0);
 	int getMaterialNoOfPolygon(unsigned int polygonNo, unsigned int layerIndex = 0);
-	char* getDiffuseTextureName(unsigned int Index);
-	char* getNormalTextureName(unsigned int Index);
+	char* getDiffuseTextureName(unsigned int Index, unsigned int texNo = 0);
+	textureType getDiffuseTextureType(unsigned int Index, unsigned int texNo);
+	char* getDiffuseTextureUVName(unsigned int Index, unsigned int texNo = 0);
+	char* getNormalTextureName(unsigned int Index, unsigned int texNo = 0);
+	char* getNormalTextureUVName(unsigned int Index, unsigned int texNo = 0);
 	double getDiffuseColor(unsigned int Index, unsigned int ColIndex);
 	double getSpecularColor(unsigned int Index, unsigned int ColIndex);
 	double getAmbientColor(unsigned int Index, unsigned int ColIndex);

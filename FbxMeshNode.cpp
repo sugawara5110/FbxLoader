@@ -269,12 +269,24 @@ int FbxMeshNode::getMaterialNoOfPolygon(unsigned int polygonNo, unsigned int lay
 	return Material[layerIndex]->materials[polygonNo];
 }
 
-char *FbxMeshNode::getDiffuseTextureName(unsigned int Index) {
-	return material[Index]->textureDifName;
+char* FbxMeshNode::getDiffuseTextureName(unsigned int Index, unsigned int texNo) {
+	return material[Index]->textureDifName[texNo].name;
 }
 
-char *FbxMeshNode::getNormalTextureName(unsigned int Index) {
-	return material[Index]->textureNorName;
+textureType FbxMeshNode::getDiffuseTextureType(unsigned int Index, unsigned int texNo) {
+	return material[Index]->textureDifName[texNo].type;
+}
+
+char* FbxMeshNode::getDiffuseTextureUVName(unsigned int Index, unsigned int texNo) {
+	return material[Index]->textureDifName[texNo].UVname;
+}
+
+char* FbxMeshNode::getNormalTextureName(unsigned int Index, unsigned int texNo) {
+	return material[Index]->textureNorName[texNo].name;
+}
+
+char* FbxMeshNode::getNormalTextureUVName(unsigned int Index, unsigned int texNo) {
+	return material[Index]->textureNorName[texNo].UVname;
 }
 
 double FbxMeshNode::getDiffuseColor(unsigned int Index, unsigned int ColIndex) {

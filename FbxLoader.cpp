@@ -192,16 +192,23 @@ void NodeRecord::searchName_Type(std::vector<ConnectionNo>& cn) {
 	}
 }
 
-void NodeRecord::createConnectionList(std::vector<ConnectionList>& cnLi) {
+void NodeRecord::createConnectionList(std::vector<ConnectionList>& cnLi, char* nodeName1) {
 	ConnectionList cl;
 	//S len "OO" L 計8byteの次にChildID
 	cl.ChildID = convertUCHARtoint64(&Property[8]);
 	//L 1byteの次にParentID
 	cl.ParentID = convertUCHARtoint64(&Property[17]);
+	if (nodeName1) {
+		if (!strcmp("NormalMap", nodeName1))cl.texType.NormalMap = true;
+		if (!strcmp("DiffuseColor", nodeName1))cl.texType.DiffuseColor = true;
+		if (!strcmp("SpecularColor", nodeName1))cl.texType.SpecularColor = true;
+		if (!strcmp("SpecularFactor", nodeName1))cl.texType.SpecularFactor = true;
+		if (!strcmp("EmissiveFactor", nodeName1))cl.texType.EmissiveFactor = true;
+	}
 	cnLi.push_back(cl);
 }
 
-void NodeRecord::set(FilePointer *fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi) {
+void NodeRecord::set(FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi) {
 	EndOffset = fp->convertBYTEtoUINT();
 	NumProperties = fp->convertBYTEtoUINT();
 	PropertyListLen = fp->convertBYTEtoUINT();
@@ -214,7 +221,7 @@ void NodeRecord::set(FilePointer *fp, std::vector<ConnectionNo>& cn, std::vector
 		fp->fRead((char*)Property, PropertyListLen);
 		searchName_Type(cn);
 		if (!strcmp(className, "C") && (!strcmp(nodeName[0], "OO") || !strcmp(nodeName[0], "OP"))) {
-			createConnectionList(cnLi);
+			createConnectionList(cnLi, nodeName[1]);
 		}
 	}
 
@@ -281,7 +288,7 @@ void FbxLoader::searchVersion(FilePointer *fp) {
 	version = fp->convertBYTEtoUINT();
 }
 
-void FbxLoader::readFBX(FilePointer *fp) {
+void FbxLoader::readFBX(FilePointer* fp) {
 	unsigned int curpos = fp->getPos();
 
 	unsigned int nodeCount = 0;
@@ -308,15 +315,29 @@ void FbxLoader::readFBX(FilePointer *fp) {
 	//ノードIDの通りにノードを繋げる
 	for (int i = 0; i < cnLi.size(); i++) {
 		for (int j = 0; j < cnNo.size(); j++) {
-			if (cnLi.data()[i].ParentID == cnNo.data()[j].ConnectionID) {//親ノードのポインタ検索
+			if (cnLi[i].ParentID == cnNo[j].ConnectionID) {//親ノードのポインタ検索
 				for (int j1 = 0; j1 < cnNo.size(); j1++) {
-					if (cnLi.data()[i].ChildID == cnNo.data()[j1].ConnectionID) {//子ノードのポインタ検索
+					if (cnLi[i].ChildID == cnNo[j1].ConnectionID) {//子ノードのポインタ検索
 						//子ノードポインタ抽出
-						NodeRecord *childP = cnNo.data()[j1].ConnectionIDPointer;
-						//親ノードポインタから親ノードへアクセス,
+						NodeRecord* childP = cnNo[j1].ConnectionIDPointer;
+						//テクスチャType登録
+						if (cnLi[i].texType.NormalMap)childP->texType.NormalMap = true;
+						if (cnLi[i].texType.DiffuseColor)childP->texType.DiffuseColor = true;
+						if (cnLi[i].texType.SpecularColor)childP->texType.SpecularColor = true;
+						if (cnLi[i].texType.SpecularFactor)childP->texType.SpecularFactor = true;
+						if (cnLi[i].texType.EmissiveFactor)childP->texType.EmissiveFactor = true;
+						//親ノードポインタから親ノードへアクセス
+						NodeRecord* cp = cnNo[j].ConnectionIDPointer;
+						//既に登録済みでないかチェック
+						bool add = true;
+						for (int cnIndex = 0; cnIndex < cp->connectionNode.size(); cnIndex++) {
+							if (cp->connectionNode[cnIndex]->thisConnectionID == childP->thisConnectionID) {
+								add = false;
+								break;
+							}
+						}
 						//親ノード内connectionNodeへ子ノードポインタ追加
-						NodeRecord *cp = cnNo.data()[j].ConnectionIDPointer;
-						cp->connectionNode.push_back(childP);
+						if (add)cp->connectionNode.push_back(childP);
 					}
 				}
 			}
@@ -324,8 +345,8 @@ void FbxLoader::readFBX(FilePointer *fp) {
 	}
 	//rootNode設定
 	for (int i = 0; i < cnNo.size(); i++) {
-		if (cnNo.data()[i].ConnectionID == 0) {
-			rootNode = cnNo.data()[i].ConnectionIDPointer;
+		if (cnNo[i].ConnectionID == 0) {
+			rootNode = cnNo[i].ConnectionIDPointer;
 			break;
 		}
 	}
@@ -497,18 +518,18 @@ void FbxLoader::setParentPointerOfSubDeformer(FbxMeshNode *mesh) {
 	}
 }
 
-void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
+void FbxLoader::getSubDeformer(NodeRecord* node, FbxMeshNode* mesh) {
 	//各Deformer情報取得
 	if (!strcmp(node->className, "Deformer")) {
 		mesh->deformer[mesh->NumDeformer] = new Deformer();
-		Deformer *defo = mesh->deformer[mesh->NumDeformer];
+		Deformer* defo = mesh->deformer[mesh->NumDeformer];
 		//Deformer名
 		int len = (int)strlen(node->nodeName[0]);
 		defo->name = new char[len + 1];
 		strcpy(defo->name, node->nodeName[0]);
 
 		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
-			NodeRecord *n1 = node->connectionNode.data()[i];
+			NodeRecord* n1 = node->connectionNode[i];
 			if (!strcmp(n1->className, "Model")) {//自身のModel
 				getAnimation(n1, defo);
 			}
@@ -516,10 +537,10 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 
 		//子ノードName登録
 		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
-			NodeRecord *n1 = node->connectionNode.data()[i];
+			NodeRecord* n1 = node->connectionNode[i];
 			if (!strcmp(n1->className, "Model")) {//自身のModel
 				for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
-					NodeRecord *n2 = n1->connectionNode.data()[i1];
+					NodeRecord* n2 = n1->connectionNode[i1];
 					if (!strcmp(n2->className, "Model")) {//子ノードのModel
 						int ln = (int)strlen(n2->nodeName[0]);
 						defo->childName[defo->NumChild] = new char[ln + 1];
@@ -530,11 +551,11 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 		}
 
 		for (unsigned int i = 0; i < node->NumChildren; i++) {
-			NodeRecord *n1 = &node->nodeChildren[i];
+			NodeRecord* n1 = &node->nodeChildren[i];
 
 			//インデックス配列,数
 			if (!strcmp(n1->className, "Indexes")) {
-				unsigned char *output = nullptr;
+				unsigned char* output = nullptr;
 				unsigned int outSize = 0;
 				Decompress(n1, &output, &outSize, sizeof(int));
 				defo->IndicesCount = outSize;
@@ -545,7 +566,7 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 
 			//ウエイト
 			if (!strcmp(n1->className, "Weights")) {
-				unsigned char *output = nullptr;
+				unsigned char* output = nullptr;
 				unsigned int outSize = 0;
 				Decompress(n1, &output, &outSize, sizeof(double));
 				defo->Weights = new double[outSize];
@@ -555,7 +576,7 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 
 			//Transform
 			if (!strcmp(n1->className, "Transform")) {
-				unsigned char *output = nullptr;
+				unsigned char* output = nullptr;
 				unsigned int outSize = 0;
 				Decompress(n1, &output, &outSize, sizeof(double));
 				ConvertUCHARtoDouble(output, defo->TransformMatrix, outSize);
@@ -564,7 +585,7 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 
 			//TransformLink
 			if (!strcmp(n1->className, "TransformLink")) {
-				unsigned char *output = nullptr;
+				unsigned char* output = nullptr;
 				unsigned int outSize = 0;
 				Decompress(n1, &output, &outSize, sizeof(double));
 				ConvertUCHARtoDouble(output, defo->TransformLinkMatrix, outSize);
@@ -575,27 +596,27 @@ void FbxLoader::getSubDeformer(NodeRecord *node, FbxMeshNode *mesh) {
 	}
 }
 
-void FbxLoader::getDeformer(NodeRecord *node, FbxMeshNode *mesh) {
+void FbxLoader::getDeformer(NodeRecord* node, FbxMeshNode* mesh) {
 	if (!strcmp(node->className, "Deformer")) {
 		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
-			NodeRecord *n1 = node->connectionNode.data()[i];
+			NodeRecord* n1 = node->connectionNode[i];
 			//各Deformer情報取得
 			getSubDeformer(n1, mesh);
 		}
 	}
 }
 
-void FbxLoader::getGeometry(NodeRecord *node, FbxMeshNode *mesh) {
+void FbxLoader::getGeometry(NodeRecord* node, FbxMeshNode* mesh) {
 	if (!strcmp(node->className, "Geometry")) {
 		int len = (int)strlen(node->nodeName[0]);
 		mesh->name = new char[len + 1];
 		strcpy(mesh->name, node->nodeName[0]);
 		for (unsigned int i = 0; i < node->NumChildren; i++) {
-			NodeRecord *n1 = &node->nodeChildren[i];
+			NodeRecord* n1 = &node->nodeChildren[i];
 
 			//頂点
 			if (!strcmp(n1->className, "Vertices") && mesh->vertices == nullptr) {
-				unsigned char *output = nullptr;
+				unsigned char* output = nullptr;
 				unsigned int outSize = 0;
 				Decompress(n1, &output, &outSize, sizeof(double));
 				mesh->NumVertices = outSize / 3;
@@ -606,7 +627,7 @@ void FbxLoader::getGeometry(NodeRecord *node, FbxMeshNode *mesh) {
 
 			//頂点インデックス
 			if (!strcmp(n1->className, "PolygonVertexIndex") && mesh->polygonVertices == nullptr) {
-				unsigned char *output = nullptr;
+				unsigned char* output = nullptr;
 				unsigned int outSize = 0;
 				Decompress(n1, &output, &outSize, sizeof(int));
 				mesh->NumPolygonVertices = outSize;
@@ -638,7 +659,7 @@ void FbxLoader::getGeometry(NodeRecord *node, FbxMeshNode *mesh) {
 		}
 
 		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
-			NodeRecord *n1 = node->connectionNode.data()[i];
+			NodeRecord* n1 = node->connectionNode[i];
 
 			//ボーン関連
 			getDeformer(n1, mesh);
@@ -646,7 +667,7 @@ void FbxLoader::getGeometry(NodeRecord *node, FbxMeshNode *mesh) {
 	}
 }
 
-void FbxLoader::getMaterial(NodeRecord *node, FbxMeshNode *mesh, unsigned int *materialIndex) {
+void FbxLoader::getMaterial(NodeRecord* node, FbxMeshNode* mesh, unsigned int* materialIndex) {
 	if (!strcmp(node->className, "Material")) {
 		mesh->material[*materialIndex] = new FbxMaterialNode();
 		int len = (int)strlen(node->nodeName[0]);
@@ -655,7 +676,7 @@ void FbxLoader::getMaterial(NodeRecord *node, FbxMeshNode *mesh, unsigned int *m
 
 		for (unsigned int i = 0; i < node->NumChildren; i++) {
 			if (!strcmp(node->nodeChildren[i].className, "Properties70")) {
-				NodeRecord *pro70 = &node->nodeChildren[i];
+				NodeRecord* pro70 = &node->nodeChildren[i];
 				for (unsigned int i1 = 0; i1 < pro70->NumChildren; i1++) {
 					getCol(&pro70->nodeChildren[i1], mesh->material[*materialIndex]->Diffuse, "DiffuseColor");
 					getCol(&pro70->nodeChildren[i1], mesh->material[*materialIndex]->Specular, "SpecularColor");
@@ -663,38 +684,75 @@ void FbxLoader::getMaterial(NodeRecord *node, FbxMeshNode *mesh, unsigned int *m
 				}
 			}
 		}
-
+		int difCount = 0;
+		bool difCountUpflg = false;
+		int norCount = 0;
+		bool norCountUpflg = false;
 		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
-			if (!strcmp(node->connectionNode.data()[i]->className, "Texture")) {
-				NodeRecord *tex = node->connectionNode.data()[i];
-				bool texTypeDiff = true;
+			if (!strcmp(node->connectionNode[i]->className, "Texture")) {
+				NodeRecord* tex = node->connectionNode[i];
+				char* uvName = nullptr;
+				int uvNameLen = 0;
 				for (unsigned int i1 = 0; i1 < tex->NumChildren; i1++) {
-					if (!strcmp(tex->nodeChildren[i1].className, "TextureName")) {
-						char *texname = tex->nodeChildren[i1].nodeName[0];
-						while (*texname != '\0') { texname++; }
-						int normal_Len = 6;
-						texname -= normal_Len;
-						if (!strcmp(texname, "normal"))texTypeDiff = false;
+					if (!strcmp(tex->nodeChildren[i1].className, "Properties70")) {
+						NodeRecord* pro = &tex->nodeChildren[i1];
+						for (unsigned int i2 = 0; i2 < pro->NumChildren; i2++) {
+							NodeRecord* proP = &pro->nodeChildren[i2];
+							if (!strcmp(proP->className, "P") && proP->nodeName[0] && !strcmp(proP->nodeName[0], "UVSet")) {
+								int numCnt = 1;
+								for (numCnt = 1; numCnt < NUMNODENAME; numCnt++) {
+									if (proP->nodeName[numCnt] == nullptr) {
+										numCnt--;
+										break;
+									}
+								}
+								//使用UV判別用文字列一時取得
+								uvName = proP->nodeName[numCnt];
+								if (uvName)uvNameLen = (int)strlen(uvName);
+							}
+						}
 					}
 				}
+
 				for (unsigned int i1 = 0; i1 < tex->NumChildren; i1++) {
 					if (!strcmp(tex->nodeChildren[i1].className, "FileName")) {
-						NodeRecord *texN = &tex->nodeChildren[i1];
+						NodeRecord* texN = &tex->nodeChildren[i1];
 						int len = (int)strlen(texN->nodeName[0]);
-						if (texTypeDiff) {
-							if (!mesh->material[*materialIndex]->textureDifName) {
-								mesh->material[*materialIndex]->textureDifName = new char[len + 1];
-								strcpy(mesh->material[*materialIndex]->textureDifName, texN->nodeName[0]);
+						if (!tex->texType.NormalMap) {
+							TextureName* texName = &mesh->material[*materialIndex]->textureDifName[difCount];
+							if (!texName->name) {
+								texName->name = new char[len + 1];
+								strcpy(texName->name, texN->nodeName[0]);
+								texName->type = tex->texType;
+								if (uvName) {
+									texName->UVname = new char[uvNameLen + 1];
+									strcpy(texName->UVname, uvName);
+								}
+								difCountUpflg = true;
 							}
 						}
 						else {
-							if (!mesh->material[*materialIndex]->textureNorName) {
-								mesh->material[*materialIndex]->textureNorName = new char[len + 1];
-								strcpy(mesh->material[*materialIndex]->textureNorName, texN->nodeName[0]);
+							TextureName* texName = &mesh->material[*materialIndex]->textureNorName[norCount];
+							if (!texName->name) {
+								texName->name = new char[len + 1];
+								strcpy(texName->name, texN->nodeName[0]);
+								if (uvName) {
+									texName->UVname = new char[uvNameLen + 1];
+									strcpy(texName->UVname, uvName);
+								}
+								norCountUpflg = true;
 							}
 						}
 					}
 				}
+			}
+			if (difCountUpflg) {
+				difCount++;
+				difCountUpflg = false;
+			}
+			if (norCountUpflg) {
+				norCount++;
+				norCountUpflg = false;
 			}
 		}
 		(*materialIndex)++;
@@ -703,8 +761,8 @@ void FbxLoader::getMaterial(NodeRecord *node, FbxMeshNode *mesh, unsigned int *m
 
 void FbxLoader::getMesh() {
 	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
-		if (!strcmp(rootNode->connectionNode.data()[i]->className, "Model") &&
-			!strcmp(rootNode->connectionNode.data()[i]->nodeName[1], "Mesh")) {
+		if (!strcmp(rootNode->connectionNode[i]->className, "Model") &&
+			!strcmp(rootNode->connectionNode[i]->nodeName[1], "Mesh")) {
 			NumMesh++;
 		}
 	}
@@ -714,11 +772,11 @@ void FbxLoader::getMesh() {
 	unsigned int mecnt = 0;
 	unsigned int matcnt = 0;
 	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
-		NodeRecord* n1 = rootNode->connectionNode.data()[i];
+		NodeRecord* n1 = rootNode->connectionNode[i];
 		if (!strcmp(n1->className, "Model") &&
 			!strcmp(n1->nodeName[1], "Mesh")) {
 			for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
-				NodeRecord* n2 = n1->connectionNode.data()[i1];
+				NodeRecord* n2 = n1->connectionNode[i1];
 				getGeometry(n2, &Mesh[mecnt]);
 				getMaterial(n2, &Mesh[mecnt], &matcnt);
 			}
@@ -730,7 +788,7 @@ void FbxLoader::getMesh() {
 
 	//rootBone生成, name登録(本来Deformerじゃないので別に生成)
 	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
-		NodeRecord* n1 = rootNode->connectionNode.data()[i];
+		NodeRecord* n1 = rootNode->connectionNode[i];
 		if (!strcmp(n1->className, "Model") && n1->nodeName[1]) {
 			if (!strcmp(n1->nodeName[1], "Root") || !strcmp(n1->nodeName[1], "Limb") || !strcmp(n1->nodeName[1], "Null")) {
 				for (unsigned int j = 0; j < NumMesh; j++) {
@@ -742,7 +800,7 @@ void FbxLoader::getMesh() {
 					getAnimation(n1, defo);
 					//子ノードのModelName登録
 					for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
-						NodeRecord* n2 = n1->connectionNode.data()[i1];
+						NodeRecord* n2 = n1->connectionNode[i1];
 						if (!strcmp(n2->className, "Model")) {
 							int ln = (int)strlen(n2->nodeName[0]);
 							defo->childName[defo->NumChild] = new char[ln + 1];
@@ -790,10 +848,10 @@ void FbxLoader::setParentPointerOfNoneMeshSubDeformer() {
 	}
 }
 
-void FbxLoader::getNoneMeshSubDeformer(NodeRecord *node) {
+void FbxLoader::getNoneMeshSubDeformer(NodeRecord* node) {
 	if (!strcmp(node->className, "Model")) {
 		deformer[NumDeformer] = new Deformer();
-		Deformer *defo = deformer[NumDeformer];
+		Deformer* defo = deformer[NumDeformer];
 		NumDeformer++;
 		int len = (int)strlen(node->nodeName[0]);
 		defo->name = new char[len + 1];
@@ -801,7 +859,7 @@ void FbxLoader::getNoneMeshSubDeformer(NodeRecord *node) {
 		getAnimation(node, defo);
 		//子ノードのModelName登録
 		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
-			NodeRecord *n1 = node->connectionNode.data()[i];
+			NodeRecord* n1 = node->connectionNode[i];
 			if (!strcmp(n1->className, "Model")) {
 				int ln = (int)strlen(n1->nodeName[0]);
 				defo->childName[defo->NumChild] = new char[ln + 1];
@@ -814,7 +872,7 @@ void FbxLoader::getNoneMeshSubDeformer(NodeRecord *node) {
 
 void FbxLoader::getNoneMeshDeformer() {
 	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
-		NodeRecord* n1 = rootNode->connectionNode.data()[i];
+		NodeRecord* n1 = rootNode->connectionNode[i];
 		if (!strcmp(n1->className, "Model") && n1->nodeName[1]) {
 			if (!strcmp(n1->nodeName[1], "Root") || !strcmp(n1->nodeName[1], "Limb") || !strcmp(n1->nodeName[1], "Null")) {
 				rootDeformer = new Deformer();
@@ -824,7 +882,7 @@ void FbxLoader::getNoneMeshDeformer() {
 				getAnimation(n1, rootDeformer);
 				//子ノードのModelName登録
 				for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
-					NodeRecord* n2 = n1->connectionNode.data()[i1];
+					NodeRecord* n2 = n1->connectionNode[i1];
 					if (!strcmp(n2->className, "Model")) {
 						int ln = (int)strlen(n2->nodeName[0]);
 						rootDeformer->childName[rootDeformer->NumChild] = new char[ln + 1];
@@ -870,13 +928,13 @@ void FbxLoader::getLcl(NodeRecord *pro70Child, AnimationCurve anim[3], char *Lcl
 	}
 }
 
-void FbxLoader::getAnimationCurve(NodeRecord *animNode, AnimationCurve anim[3], char *Lcl) {
+void FbxLoader::getAnimationCurve(NodeRecord* animNode, AnimationCurve anim[3], char* Lcl) {
 	unsigned int animInd = 0;
 	if (!strcmp(animNode->className, "AnimationCurveNode") &&
 		!strcmp(animNode->nodeName[0], Lcl)) {
 		for (unsigned int i = 0; i < animNode->connectionNode.size(); i++) {
-			if (!strcmp(animNode->connectionNode.data()[i]->className, "AnimationCurve")) {
-				NodeRecord *animCurve = animNode->connectionNode.data()[i];
+			if (!strcmp(animNode->connectionNode[i]->className, "AnimationCurve")) {
+				NodeRecord* animCurve = animNode->connectionNode[i];
 				for (unsigned int i1 = 0; i1 < animCurve->NumChildren; i1++) {
 					if (!strcmp(animCurve->nodeChildren[i1].className, "Default")) {
 						if (anim[animInd].def)continue;
@@ -885,7 +943,7 @@ void FbxLoader::getAnimationCurve(NodeRecord *animNode, AnimationCurve anim[3], 
 					}
 					if (!strcmp(animCurve->nodeChildren[i1].className, "KeyTime")) {
 						if (anim[animInd].KeyTime)continue;
-						unsigned char *output = nullptr;
+						unsigned char* output = nullptr;
 						unsigned int outSize = 0;
 						if (Decompress(&animCurve->nodeChildren[i1], &output, &outSize, sizeof(int64_t))) {
 							anim[animInd].NumKey = outSize;
@@ -896,7 +954,7 @@ void FbxLoader::getAnimationCurve(NodeRecord *animNode, AnimationCurve anim[3], 
 					}
 					if (!strcmp(animCurve->nodeChildren[i1].className, "KeyValueFloat")) {
 						if (anim[animInd].KeyValueFloat)continue;
-						unsigned char *output = nullptr;
+						unsigned char* output = nullptr;
 						unsigned int outSize = 0;
 						if (Decompress(&animCurve->nodeChildren[i1], &output, &outSize, sizeof(float))) {
 							anim[animInd].NumKey = outSize;
@@ -912,11 +970,11 @@ void FbxLoader::getAnimationCurve(NodeRecord *animNode, AnimationCurve anim[3], 
 	}
 }
 
-void FbxLoader::getAnimation(NodeRecord *model, Deformer *defo) {
+void FbxLoader::getAnimation(NodeRecord* model, Deformer* defo) {
 	//Lcl Translation, Lcl Rotation, Lcl Scaling取得
 	for (unsigned int i = 0; i < model->NumChildren; i++) {
 		if (!strcmp(model->nodeChildren[i].className, "Properties70")) {
-			NodeRecord *pro70 = &model->nodeChildren[i];
+			NodeRecord* pro70 = &model->nodeChildren[i];
 			for (unsigned int i1 = 0; i1 < pro70->NumChildren; i1++) {
 				getLcl(&pro70->nodeChildren[i1], defo->Translation, "Lcl Translation");
 				getLcl(&pro70->nodeChildren[i1], defo->Rotation, "Lcl Rotation");
@@ -926,9 +984,9 @@ void FbxLoader::getAnimation(NodeRecord *model, Deformer *defo) {
 	}
 	//Animation関連
 	for (unsigned int i = 0; i < model->connectionNode.size(); i++) {
-		getAnimationCurve(model->connectionNode.data()[i], defo->Translation, "T");
-		getAnimationCurve(model->connectionNode.data()[i], defo->Rotation, "R");
-		getAnimationCurve(model->connectionNode.data()[i], defo->Scaling, "S");
+		getAnimationCurve(model->connectionNode[i], defo->Translation, "T");
+		getAnimationCurve(model->connectionNode[i], defo->Rotation, "R");
+		getAnimationCurve(model->connectionNode[i], defo->Scaling, "S");
 	}
 }
 
@@ -974,7 +1032,7 @@ void FbxLoader::ConvertUCHARtofloat(unsigned char *arr, float *outArr, unsigned 
 	}
 }
 
-void FbxLoader::drawname(NodeRecord *node, bool cnNode) {
+void FbxLoader::drawname(NodeRecord* node, bool cnNode) {
 	static unsigned int level = 0;
 	for (unsigned int j = 0; j < level; j++) {
 		std::cout << "    " << std::flush;
@@ -996,7 +1054,7 @@ void FbxLoader::drawname(NodeRecord *node, bool cnNode) {
 	}
 	if (cnNode) {
 		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
-			drawname(node->connectionNode.data()[i], cnNode);
+			drawname(node->connectionNode[i], cnNode);
 		}
 	}
 	level--;
