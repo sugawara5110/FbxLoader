@@ -374,16 +374,16 @@ bool FbxLoader::Decompress(NodeRecord *node, unsigned char **output, unsigned in
 	return true;
 }
 
-void FbxLoader::getLayerElementSub(NodeRecord *node, LayerElement *le) {
+void FbxLoader::getLayerElementSub(NodeRecord* node, LayerElement* le) {
 
 	for (unsigned int i = 0; i < node->NumChildren; i++) {
-		NodeRecord *n1 = &node->nodeChildren[i];
+		NodeRecord* n1 = &node->nodeChildren[i];
 
 		if (!strcmp(n1->className, "Name")) {
 			unsigned int size = convertUCHARtoUINT(&n1->Property[1]);
 			if (size > 0) {
 				le->name = new char[size + 1];
-				unsigned char *pr = &n1->Property[5];
+				unsigned char* pr = &n1->Property[5];
 				memcpy(le->name, (char*)pr, size);
 				le->name[size] = '\0';
 			}
@@ -393,14 +393,24 @@ void FbxLoader::getLayerElementSub(NodeRecord *node, LayerElement *le) {
 			unsigned int size = convertUCHARtoUINT(&n1->Property[1]);
 			if (size > 0) {
 				le->MappingInformationType = new char[size + 1];
-				unsigned char *pr = &n1->Property[5];
+				unsigned char* pr = &n1->Property[5];
 				memcpy(le->MappingInformationType, (char*)pr, size);
 				le->MappingInformationType[size] = '\0';
 			}
 		}
 
+		if (!strcmp(n1->className, "ReferenceInformationType")) {
+			unsigned int size = convertUCHARtoUINT(&n1->Property[1]);
+			if (size > 0) {
+				le->ReferenceInformationType = new char[size + 1];
+				unsigned char* pr = &n1->Property[5];
+				memcpy(le->ReferenceInformationType, (char*)pr, size);
+				le->ReferenceInformationType[size] = '\0';
+			}
+		}
+
 		if (!strcmp(n1->className, "Materials")) {
-			unsigned char *output = nullptr;
+			unsigned char* output = nullptr;
 			unsigned int outSize = 0;
 			Decompress(n1, &output, &outSize, sizeof(int));
 			le->Nummaterialarr = outSize;
@@ -410,7 +420,7 @@ void FbxLoader::getLayerElementSub(NodeRecord *node, LayerElement *le) {
 		}
 
 		if (!strcmp(n1->className, "Normals")) {
-			unsigned char *output = nullptr;
+			unsigned char* output = nullptr;
 			unsigned int outSize = 0;
 			Decompress(n1, &output, &outSize, sizeof(double));
 			le->Numnormals = outSize;
@@ -420,7 +430,7 @@ void FbxLoader::getLayerElementSub(NodeRecord *node, LayerElement *le) {
 		}
 
 		if (!strcmp(n1->className, "UV")) {
-			unsigned char *output = nullptr;
+			unsigned char* output = nullptr;
 			unsigned int outSize = 0;
 			Decompress(n1, &output, &outSize, sizeof(double));
 			le->NumUV = outSize;
@@ -430,7 +440,7 @@ void FbxLoader::getLayerElementSub(NodeRecord *node, LayerElement *le) {
 		}
 
 		if (!strcmp(n1->className, "UVIndex")) {
-			unsigned char *output = nullptr;
+			unsigned char* output = nullptr;
 			unsigned int outSize = 0;
 			Decompress(n1, &output, &outSize, sizeof(int));
 			le->NumUVindex = outSize;
@@ -453,12 +463,14 @@ void FbxLoader::getLayerElement(NodeRecord* node, FbxMeshNode* mesh) {
 		mesh->Normals[No] = new LayerElement();
 		LayerElement* nor = mesh->Normals[No];
 		getLayerElementSub(node, nor);
+		mesh->NumNormalsObj++;
 	}
 	if (!strcmp(node->className, "LayerElementUV")) {
 		int No = convertUCHARtoINT32(&node->Property[1]);
 		mesh->UV[No] = new LayerElement();
 		LayerElement* uv = mesh->UV[No];
 		getLayerElementSub(node, uv);
+		mesh->NumUVObj++;
 	}
 }
 
@@ -749,10 +761,12 @@ void FbxLoader::getMaterial(NodeRecord* node, FbxMeshNode* mesh, unsigned int* m
 			if (difCountUpflg) {
 				difCount++;
 				difCountUpflg = false;
+				mesh->material[*materialIndex]->NumDifTexture = difCount;
 			}
 			if (norCountUpflg) {
 				norCount++;
 				norCountUpflg = false;
+				mesh->material[*materialIndex]->NumNorTexture = norCount;
 			}
 		}
 		(*materialIndex)++;

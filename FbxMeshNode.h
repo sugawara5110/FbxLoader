@@ -31,20 +31,22 @@ class LayerElement {
 private:
 	friend FbxMeshNode;
 	friend FbxLoader;
-	char *MappingInformationType = nullptr;
-	char *name = nullptr;
+	char* MappingInformationType = nullptr;
+	char* ReferenceInformationType = nullptr;
+	char* name = nullptr;
 	unsigned int Nummaterialarr = 0;
-	int *materials = nullptr;
+	int* materials = nullptr;
 	unsigned int Numnormals = 0;
-	double *normals = nullptr;
+	double* normals = nullptr;
 	unsigned int NumUV = 0;
-	double *UV = nullptr;
+	double* UV = nullptr;
 	unsigned int NumUVindex = 0;
-	int *UVindex = nullptr;
-	double *AlignedUV = nullptr;
+	int* UVindex = nullptr;
+	double* AlignedUV = nullptr;
 
 	~LayerElement() {
 		aDELETE(MappingInformationType);
+		aDELETE(ReferenceInformationType);
 		aDELETE(name);
 		aDELETE(materials);
 		aDELETE(normals);
@@ -158,7 +160,9 @@ private:
 	double Ambient[3] = {};
 	char* MaterialName = nullptr;
 	const static int numTex = 10;
+	int NumDifTexture = 0;
 	TextureName textureDifName[numTex];
+	int NumNorTexture = 0;
 	TextureName textureNorName[numTex];
 
 public:
@@ -178,11 +182,13 @@ private:
 	unsigned int NumPolygonVertices = 0;//頂点インデックス数
 	unsigned int NumPolygon = 0;//ポリゴン数
 	unsigned int* PolygonSize = nullptr;//各ポリゴン頂点インデックス数
-	int NumMaterial = 0;//マテリアル数
 	const static int NumLayerElement = 10;
+	int NumMaterial = 0;//マテリアル数
 	FbxMaterialNode* material[NumLayerElement] = { nullptr };
-	LayerElement* Material[NumLayerElement] = { nullptr };
+	LayerElement* Material[NumLayerElement] = { nullptr };//ポリゴン毎の使用マテリアル番号配列
+	int NumNormalsObj = 0;
 	LayerElement* Normals[NumLayerElement] = { nullptr };
+	int NumUVObj = 0;
 	LayerElement* UV[NumLayerElement] = { nullptr };
 	unsigned int NumDeformer = 0;
 	Deformer* deformer[256] = { nullptr };
@@ -206,28 +212,36 @@ public:
 	unsigned int getNumMaterial();
 
 	//Material
-	char* getMaterialName(unsigned int layerIndex = 0);
-	char* getMaterialMappingInformationType(unsigned int layerIndex = 0);
-	int getMaterialNoOfPolygon(unsigned int polygonNo, unsigned int layerIndex = 0);
+	char* getMaterialName(unsigned int Index = 0);
+	int getNumDiffuseTexture(unsigned int Index);
 	char* getDiffuseTextureName(unsigned int Index, unsigned int texNo = 0);
 	textureType getDiffuseTextureType(unsigned int Index, unsigned int texNo);
 	char* getDiffuseTextureUVName(unsigned int Index, unsigned int texNo = 0);
+	int getNumNormalTexture(unsigned int Index);
 	char* getNormalTextureName(unsigned int Index, unsigned int texNo = 0);
 	char* getNormalTextureUVName(unsigned int Index, unsigned int texNo = 0);
 	double getDiffuseColor(unsigned int Index, unsigned int ColIndex);
 	double getSpecularColor(unsigned int Index, unsigned int ColIndex);
 	double getAmbientColor(unsigned int Index, unsigned int ColIndex);
 
+	char* getMaterialMappingInformationType(unsigned int layerIndex = 0);
+	char* getMaterialReferenceInformationType(unsigned int layerIndex = 0);
+	int getMaterialNoOfPolygon(unsigned int polygonNo, unsigned int layerIndex = 0);
+
 	//Normal
+	int getNumNormalObj();
 	unsigned int getNumNormal(unsigned int layerIndex = 0);
 	char* getNormalName(unsigned int layerIndex = 0);
 	char* getNormalMappingInformationType(unsigned int layerIndex = 0);
+	char* getNormalReferenceInformationType(unsigned int layerIndex = 0);
 	double* getNormal(unsigned int layerIndex = 0);
 
 	//UV
+	int getNumUVObj();
 	unsigned int getNumUV(unsigned int layerIndex = 0);
 	char* getUVName(unsigned int layerIndex = 0);
 	char* getUVMappingInformationType(unsigned int layerIndex = 0);
+	char* getUVReferenceInformationType(unsigned int layerIndex = 0);
 	double* getUV(unsigned int layerIndex = 0);
 	unsigned int getNumUVindex(unsigned int layerIndex = 0);
 	int* getUVindex(unsigned int layerIndex = 0);
