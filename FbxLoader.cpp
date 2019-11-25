@@ -7,7 +7,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "FbxLoader.h"
 #include "iostream"
-#include "DecompressDeflate.h"
+#include "../DecompressDeflate/DecompressDeflate.h"
 #define Kaydara_FBX_binary 18
 
 FilePointer::~FilePointer() {
