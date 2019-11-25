@@ -1,3 +1,3 @@
-Fbxファイルの読み込みライブラリです。圧縮データの解凍処理も内部に実装してます。
+Fbxファイルの読み込みライブラリです。圧縮データの解凍処理(DecompressDeflate)を読み込んでます。
 
 It is a library for reading Fbx files, and decompression processing of compressed data is also implemented internally.
