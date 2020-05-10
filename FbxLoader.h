@@ -118,51 +118,53 @@ private:
 	friend NodeRecord;
 	unsigned int version = 0;//23から26バイトまで4バイト分符号なし整数,リトルエンディアン(下から読む)
 	NodeRecord FbxRecord;//ファイルそのまま
-	NodeRecord *rootNode = nullptr;//ConnectionID:0のポインタ
+	NodeRecord* rootNode = nullptr;//ConnectionID:0のポインタ
 	std::vector<ConnectionNo> cnNo;
 	std::vector<ConnectionList> cnLi;
 	unsigned int NumMesh = 0;
-	FbxMeshNode *Mesh = nullptr;
+	FbxMeshNode* Mesh = nullptr;
 	unsigned int NumDeformer = 0;
-	Deformer *deformer[256] = { nullptr };//デフォーマーのみのファイル対応
-	Deformer *rootDeformer = nullptr;
+	Deformer* deformer[256] = { nullptr };//デフォーマーのみのファイル対応
+	Deformer* rootDeformer = nullptr;
+	int numAnimation = 0;
 
-	bool fileCheck(FilePointer *fp);
-	void searchVersion(FilePointer *fp);
-	void readFBX(FilePointer *fp);
-	bool Decompress(NodeRecord *node, unsigned char **output, unsigned int *outSize, unsigned int typeSize);
-	void getLayerElementSub(NodeRecord *node, LayerElement *le);
-	void getLayerElement(NodeRecord *node, FbxMeshNode *mesh);
-	bool nameComparison(char *name1, char *name2);
-	void setParentPointerOfSubDeformer(FbxMeshNode *mesh);
-	void getSubDeformer(NodeRecord *node, FbxMeshNode *mesh);
-	void getDeformer(NodeRecord *node, FbxMeshNode *mesh);
-	void getGeometry(NodeRecord *node, FbxMeshNode *mesh);
-	void getMaterial(NodeRecord *node, FbxMeshNode *mesh, unsigned int *materialIndex);
+	bool fileCheck(FilePointer* fp);
+	void searchVersion(FilePointer* fp);
+	void readFBX(FilePointer* fp);
+	bool Decompress(NodeRecord* node, unsigned char** output, unsigned int* outSize, unsigned int typeSize);
+	void getLayerElementSub(NodeRecord* node, LayerElement* le);
+	void getLayerElement(NodeRecord* node, FbxMeshNode* mesh);
+	bool nameComparison(char* name1, char* name2);
+	void setParentPointerOfSubDeformer(FbxMeshNode* mesh);
+	void getSubDeformer(NodeRecord* node, FbxMeshNode* mesh);
+	void getDeformer(NodeRecord* node, FbxMeshNode* mesh);
+	void getGeometry(NodeRecord* node, FbxMeshNode* mesh);
+	void getMaterial(NodeRecord* node, FbxMeshNode* mesh, unsigned int* materialIndex);
 	void getMesh();
 	void setParentPointerOfNoneMeshSubDeformer();
-	void getNoneMeshSubDeformer(NodeRecord *node);
+	void getNoneMeshSubDeformer(NodeRecord* node);
 	void getNoneMeshDeformer();
-	void getCol(NodeRecord *pro70Child, double Col[3], char *ColStr);
-	void getLcl(NodeRecord *pro70Child, AnimationCurve anim[3], char *LclStr);
-	void getAnimationCurve(NodeRecord *animNode, AnimationCurve anim[3], char *Lcl);
-	void getAnimation(NodeRecord *model, Deformer *defo);
-	void ConvertUCHARtoDouble(unsigned char *arr, double *outArr, unsigned int outsize);
-	void ConvertUCHARtoINT32(unsigned char *arr, int *outArr, unsigned int outsize);
-	void ConvertUCHARtoint64_t(unsigned char *arr, int64_t *outArr, unsigned int outsize);
-	void ConvertUCHARtofloat(unsigned char *arr, float *outArr, unsigned int outsize);
-	void drawname(NodeRecord *node, bool cnNode);
+	void getCol(NodeRecord* pro70Child, double Col[3], char* ColStr);
+	void getLcl(NodeRecord* pro70Child, AnimationCurve anim[3], char* LclStr);
+	void getAnimationCurve(unsigned int& animInd, NodeRecord* animNode, AnimationCurve* anim, char* Lcl);
+	void getAnimation(NodeRecord* model, Deformer* defo);
+	void ConvertUCHARtoDouble(unsigned char* arr, double* outArr, unsigned int outsize);
+	void ConvertUCHARtoINT32(unsigned char* arr, int* outArr, unsigned int outsize);
+	void ConvertUCHARtoint64_t(unsigned char* arr, int64_t* outArr, unsigned int outsize);
+	void ConvertUCHARtofloat(unsigned char* arr, float* outArr, unsigned int outsize);
+	void drawname(NodeRecord* node, bool cnNode);
 
 public:
 	~FbxLoader();
-	bool setFbxFile(char *pass);
-	bool setBinaryInFbxFile(char *strArray, int size);
-	NodeRecord *getFbxRecord();
-	NodeRecord *getRootNode();
+	bool setFbxFile(char* pass);
+	bool setBinaryInFbxFile(char* strArray, int size);
+	NodeRecord* getFbxRecord();
+	NodeRecord* getRootNode();
 	unsigned int getNumFbxMeshNode();
-	FbxMeshNode *getFbxMeshNode(unsigned int index);
+	FbxMeshNode* getFbxMeshNode(unsigned int index);
 	unsigned int getNumNoneMeshDeformer();
-	Deformer *getNoneMeshDeformer(unsigned int index);
+	Deformer* getNoneMeshDeformer(unsigned int index);
+	int getNumAnimation() { return numAnimation; }
 	int getVersion();
 	void drawRecord();
 	void drawNode();

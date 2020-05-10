@@ -310,6 +310,20 @@ void FbxLoader::readFBX(FilePointer* fp) {
 
 	for (unsigned int i = 0; i < nodeCount; i++) {
 		FbxRecord.nodeChildren[i].set(fp, cnNo, cnLi);
+		NodeRecord* n1 = &FbxRecord.nodeChildren[i];
+		if (!strcmp(n1->className, "Definitions")) {
+			for (unsigned int i1 = 0; i1 < n1->NumChildren; i1++) {
+				NodeRecord* n2 = &n1->nodeChildren[i1];
+				if (n2->nodeName[0] && !strcmp(n2->nodeName[0], "AnimationLayer")) {
+					for (unsigned int i2 = 0; i2 < n2->NumChildren; i2++) {
+						NodeRecord* n3 = &n2->nodeChildren[i2];
+						if (!strcmp(n3->className, "Count")) {
+							Deformer::numAnimation = convertUCHARtoINT32(&n3->Property[1]);
+						}
+					}
+				}
+			}
+		}
 	}
 
 	//ƒm[ƒhID‚Ì’Ê‚è‚Éƒm[ƒh‚ðŒq‚°‚é
@@ -942,8 +956,7 @@ void FbxLoader::getLcl(NodeRecord *pro70Child, AnimationCurve anim[3], char *Lcl
 	}
 }
 
-void FbxLoader::getAnimationCurve(NodeRecord* animNode, AnimationCurve anim[3], char* Lcl) {
-	unsigned int animInd = 0;
+void FbxLoader::getAnimationCurve(unsigned int& animInd, NodeRecord* animNode, AnimationCurve* anim, char* Lcl) {
 	if (!strcmp(animNode->className, "AnimationCurveNode") &&
 		!strcmp(animNode->nodeName[0], Lcl)) {
 		for (unsigned int i = 0; i < animNode->connectionNode.size(); i++) {
@@ -997,10 +1010,11 @@ void FbxLoader::getAnimation(NodeRecord* model, Deformer* defo) {
 		}
 	}
 	//AnimationŠÖ˜A
+	unsigned int animInd[3] = {};
 	for (unsigned int i = 0; i < model->connectionNode.size(); i++) {
-		getAnimationCurve(model->connectionNode[i], defo->Translation, "T");
-		getAnimationCurve(model->connectionNode[i], defo->Rotation, "R");
-		getAnimationCurve(model->connectionNode[i], defo->Scaling, "S");
+		getAnimationCurve(animInd[0], model->connectionNode[i], defo->Translation, "T");
+		getAnimationCurve(animInd[1], model->connectionNode[i], defo->Rotation, "R");
+		getAnimationCurve(animInd[2], model->connectionNode[i], defo->Scaling, "S");
 	}
 }
 

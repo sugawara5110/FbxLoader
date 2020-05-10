@@ -93,10 +93,11 @@ private:
 	double TransformLinkMatrix[16] = {};//èâä˙épê®çsóÒ(ê‚ëŒà íu)
 	double LocalPose[16] = {};
 	double GlobalPose[16] = {};
+	static int numAnimation;
 
-	AnimationCurve Translation[3];
-	AnimationCurve Rotation[3];
-	AnimationCurve Scaling[3];
+	AnimationCurve* Translation = nullptr;
+	AnimationCurve* Rotation = nullptr;
+	AnimationCurve* Scaling = nullptr;
 
 	void MatrixScaling(double mat[16], double sx, double sy, double sz);
 	void MatrixRotationX(double mat[16], double theta);
@@ -107,10 +108,18 @@ private:
 	double CalDetMat4x4(double mat[16]);
 	void MatrixInverse(double outmat[16], double mat[16]);
 	void VectorMatrixMultiply(double inoutvec[3], double mat[16]);
-	double* SubEvaluateGlobalTransform(int64_t time);
+	double* SubEvaluateGlobalTransform(int64_t time, int animationIndex);
 
 public:
+	Deformer() {
+		Translation = new AnimationCurve[numAnimation * 3];
+		Rotation = new AnimationCurve[numAnimation * 3];
+		Scaling = new AnimationCurve[numAnimation * 3];
+	}
 	~Deformer() {
+		aDELETE(Translation);
+		aDELETE(Rotation);
+		aDELETE(Scaling);
 		aDELETE(name);
 		aDELETE(Indices);
 		aDELETE(Weights);
@@ -124,8 +133,8 @@ public:
 	double* getTransformLinkMatrixDirect() { return TransformLinkMatrix; }
 	int64_t getTimeFRAMES60(int frame);
 	int64_t getTimeFRAMES30(int frame);
-	void EvaluateLocalTransform(int64_t time);
-	void EvaluateGlobalTransform(int64_t time);
+	void EvaluateLocalTransform(int64_t time, int animationIndex = 0);
+	void EvaluateGlobalTransform(int64_t time, int animationIndex = 0);
 	double getEvaluateLocalTransform(unsigned int y, unsigned int x);
 	double getEvaluateGlobalTransform(unsigned int y, unsigned int x);
 	double* getLocalPose() { return LocalPose; }

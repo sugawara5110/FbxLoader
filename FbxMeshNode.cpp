@@ -24,6 +24,8 @@ double AnimationCurve::getKeyValue(int64_t time) {
 	return (double)KeyValueFloat[ind - 1] + addVal;
 }
 
+int Deformer::numAnimation = 0;
+
 void Deformer::MatrixScaling(double mat[16], double sx, double sy, double sz) {
 	mat[0] = sx; mat[1] = 0.0; mat[2] = 0.0; mat[3] = 0.0;
 	mat[4] = 0.0; mat[5] = sy; mat[6] = 0.0; mat[7] = 0.0;
@@ -163,17 +165,23 @@ int64_t Deformer::getTimeFRAMES30(int frame) {
 	return frame * 1539538600ll;
 }
 
-void Deformer::EvaluateLocalTransform(int64_t time) {
+void Deformer::EvaluateLocalTransform(int64_t time, int animationIndex) {
+	int index = animationIndex * 3;
 	double sca[16] = {};
-	MatrixScaling(sca, Scaling[0].getKeyValue(time), Scaling[1].getKeyValue(time), Scaling[2].getKeyValue(time));
+	MatrixScaling(sca, Scaling[0 + index].getKeyValue(time),
+		Scaling[1 + index].getKeyValue(time),
+		Scaling[2 + index].getKeyValue(time));
+
 	double rotx[16] = {};
-	MatrixRotationX(rotx, Rotation[0].getKeyValue(time));
+	MatrixRotationX(rotx, Rotation[0 + index].getKeyValue(time));
 	double roty[16] = {};
-	MatrixRotationY(roty, Rotation[1].getKeyValue(time));
+	MatrixRotationY(roty, Rotation[1 + index].getKeyValue(time));
 	double rotz[16] = {};
-	MatrixRotationZ(rotz, Rotation[2].getKeyValue(time));
+	MatrixRotationZ(rotz, Rotation[2 + index].getKeyValue(time));
 	double mov[16] = {};
-	MatrixTranslation(mov, Translation[0].getKeyValue(time), Translation[1].getKeyValue(time), Translation[2].getKeyValue(time));
+	MatrixTranslation(mov, Translation[0 + index].getKeyValue(time),
+		Translation[1 + index].getKeyValue(time),
+		Translation[2 + index].getKeyValue(time));
 
 	double rotxy[16] = {};
 	MatrixMultiply(rotxy, rotx, roty);
@@ -185,11 +193,11 @@ void Deformer::EvaluateLocalTransform(int64_t time) {
 	MatrixMultiply(LocalPose, scrot, mov);
 }
 
-double *Deformer::SubEvaluateGlobalTransform(int64_t time) {
-	EvaluateLocalTransform(time);
+double* Deformer::SubEvaluateGlobalTransform(int64_t time, int animationIndex) {
+	EvaluateLocalTransform(time, animationIndex);
 	if (parentNode) {
 		//ルートノード以外
-		double *GlobalPosePare = parentNode->SubEvaluateGlobalTransform(time);
+		double* GlobalPosePare = parentNode->SubEvaluateGlobalTransform(time, animationIndex);
 		MatrixMultiply(GlobalPose, LocalPose, GlobalPosePare);
 		return GlobalPose;
 	}
@@ -197,8 +205,8 @@ double *Deformer::SubEvaluateGlobalTransform(int64_t time) {
 	return LocalPose;
 }
 
-void Deformer::EvaluateGlobalTransform(int64_t time) {
-	SubEvaluateGlobalTransform(time);
+void Deformer::EvaluateGlobalTransform(int64_t time, int animationIndex) {
+	SubEvaluateGlobalTransform(time, animationIndex);
 }
 
 double Deformer::getEvaluateLocalTransform(unsigned int y, unsigned int x) {
