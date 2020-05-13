@@ -61,12 +61,11 @@ class AnimationCurve {
 private:
 	friend Deformer;
 	friend FbxLoader;
-	double Lcl = 0;
 	unsigned int NumKey = 0;
 	double Default = 0.0;
 	bool def = false;
-	int64_t *KeyTime = nullptr;
-	float *KeyValueFloat = nullptr;
+	int64_t* KeyTime = nullptr;
+	float* KeyValueFloat = nullptr;
 
 	~AnimationCurve() {
 		aDELETE(KeyTime);

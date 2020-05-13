@@ -112,6 +112,24 @@ private:
 	~NodeRecord();
 };
 
+struct GlobalSettings {
+	int UpAxis = 0;
+	int UpAxisSign = 0;
+	int FrontAxis = 0;
+	int FrontAxisSign = 0;
+	int CoordAxis = 0;
+	int CoordAxisSign = 0;
+	int OriginalUpAxis = 0;
+	int OriginalUpAxisSign = 0;
+	double UnitScaleFactor = 0.0;
+	double OriginalUnitScaleFactor = 0.0;
+	double AmbientColor[3] = {};
+	int TimeMode = 0;
+	int64_t TimeSpanStart = 0;
+	int64_t TimeSpanStop = 0;
+	double CustomFrameRate = 0.0;
+};
+
 class FbxLoader {
 
 private:
@@ -127,6 +145,7 @@ private:
 	Deformer* deformer[256] = { nullptr };//デフォーマーのみのファイル対応
 	Deformer* rootDeformer = nullptr;
 	int numAnimation = 0;
+	GlobalSettings Gset = {};
 
 	bool fileCheck(FilePointer* fp);
 	void searchVersion(FilePointer* fp);
@@ -145,7 +164,6 @@ private:
 	void getNoneMeshSubDeformer(NodeRecord* node);
 	void getNoneMeshDeformer();
 	void getCol(NodeRecord* pro70Child, double Col[3], char* ColStr);
-	void getLcl(NodeRecord* pro70Child, AnimationCurve anim[3], char* LclStr);
 	void getAnimationCurve(unsigned int& animInd, NodeRecord* animNode, AnimationCurve* anim, char* Lcl);
 	void getAnimation(NodeRecord* model, Deformer* defo);
 	void ConvertUCHARtoDouble(unsigned char* arr, double* outArr, unsigned int outsize);
@@ -153,6 +171,9 @@ private:
 	void ConvertUCHARtoint64_t(unsigned char* arr, int64_t* outArr, unsigned int outsize);
 	void ConvertUCHARtofloat(unsigned char* arr, float* outArr, unsigned int outsize);
 	void drawname(NodeRecord* node, bool cnNode);
+	void getPropertiesInt(NodeRecord* pro70Child, int& pi, char* pName);
+	void getPropertiesint64(NodeRecord* pro70Child, int64_t& pi, char* pName);
+	void getPropertiesDouble(NodeRecord* pro70Child, double* piArr, int num, char* pName);
 
 public:
 	~FbxLoader();
@@ -165,6 +186,7 @@ public:
 	unsigned int getNumNoneMeshDeformer();
 	Deformer* getNoneMeshDeformer(unsigned int index);
 	int getNumAnimation() { return numAnimation; }
+	GlobalSettings getGlobalSettings() { return Gset; }
 	int getVersion();
 	void drawRecord();
 	void drawNode();

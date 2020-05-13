@@ -319,7 +319,33 @@ void FbxLoader::readFBX(FilePointer* fp) {
 						NodeRecord* n3 = &n2->nodeChildren[i2];
 						if (!strcmp(n3->className, "Count")) {
 							Deformer::numAnimation = convertUCHARtoINT32(&n3->Property[1]);
+							numAnimation = Deformer::numAnimation;
 						}
+					}
+				}
+			}
+		}
+		if (!strcmp(n1->className, "GlobalSettings")) {
+			for (unsigned int i1 = 0; i1 < n1->NumChildren; i1++) {
+				NodeRecord* n2 = &n1->nodeChildren[i1];
+				if (!strcmp(n2->className, "Properties70")) {
+					for (unsigned int i2 = 0; i2 < n2->NumChildren; i2++) {
+						NodeRecord* n3 = &n2->nodeChildren[i2];
+						getPropertiesInt(n3, Gset.UpAxis, "UpAxis");
+						getPropertiesInt(n3, Gset.UpAxisSign, "UpAxisSign");
+						getPropertiesInt(n3, Gset.FrontAxis, "FrontAxis");
+						getPropertiesInt(n3, Gset.FrontAxisSign, "FrontAxisSign");
+						getPropertiesInt(n3, Gset.CoordAxis, "CoordAxis");
+						getPropertiesInt(n3, Gset.CoordAxisSign, "CoordAxisSign");
+						getPropertiesInt(n3, Gset.OriginalUpAxis, "OriginalUpAxis");
+						getPropertiesInt(n3, Gset.OriginalUpAxisSign, "OriginalUpAxisSign");
+						getPropertiesDouble(n3, &Gset.UnitScaleFactor, 1, "UnitScaleFactor");
+						getPropertiesDouble(n3, &Gset.OriginalUnitScaleFactor, 1, "OriginalUnitScaleFactor");
+						getPropertiesDouble(n3, Gset.AmbientColor, 3, "AmbientColor");
+						getPropertiesInt(n3, Gset.TimeMode, "TimeMode");
+						getPropertiesint64(n3, Gset.TimeSpanStart, "TimeSpanStart");
+						getPropertiesint64(n3, Gset.TimeSpanStop, "TimeSpanStop");
+						getPropertiesDouble(n3, &Gset.CustomFrameRate, 1, "CustomFrameRate");
 					}
 				}
 			}
@@ -942,15 +968,37 @@ void FbxLoader::getCol(NodeRecord *pro70Child, double Col[3], char *ColStr) {
 	}
 }
 
-void FbxLoader::getLcl(NodeRecord *pro70Child, AnimationCurve anim[3], char *LclStr) {
+void FbxLoader::getPropertiesInt(NodeRecord* pro70Child, int& pi, char* pName) {
 	if (!strcmp(pro70Child->className, "P") &&
-		!strcmp(pro70Child->nodeName[0], LclStr)) {
+		!strcmp(pro70Child->nodeName[0], pName)) {
 		unsigned int proInd = 1;
 		for (unsigned int i = 0; i < 4; i++) {
 			proInd += convertUCHARtoUINT(&pro70Child->Property[proInd]) + 1 + 4;
 		}
-		for (unsigned int i = 0; i < 3; i++) {
-			ConvertUCHARtoDouble(&pro70Child->Property[proInd], &anim[i].Lcl, 1);
+		pi = convertUCHARtoINT32(&pro70Child->Property[proInd]);
+	}
+}
+
+void FbxLoader::getPropertiesint64(NodeRecord* pro70Child, int64_t& pi, char* pName) {
+	if (!strcmp(pro70Child->className, "P") &&
+		!strcmp(pro70Child->nodeName[0], pName)) {
+		unsigned int proInd = 1;
+		for (unsigned int i = 0; i < 4; i++) {
+			proInd += convertUCHARtoUINT(&pro70Child->Property[proInd]) + 1 + 4;
+		}
+		pi = convertUCHARtoint64(&pro70Child->Property[proInd]);
+	}
+}
+
+void FbxLoader::getPropertiesDouble(NodeRecord* pro70Child, double* piArr, int num, char* pName) {
+	if (!strcmp(pro70Child->className, "P") &&
+		!strcmp(pro70Child->nodeName[0], pName)) {
+		unsigned int proInd = 1;
+		for (unsigned int i = 0; i < 4; i++) {
+			proInd += convertUCHARtoUINT(&pro70Child->Property[proInd]) + 1 + 4;
+		}
+		for (int i = 0; i < num; i++) {
+			piArr[i] = convertUCHARtoDouble(&pro70Child->Property[proInd]);
 			proInd += 9;
 		}
 	}
@@ -998,17 +1046,6 @@ void FbxLoader::getAnimationCurve(unsigned int& animInd, NodeRecord* animNode, A
 }
 
 void FbxLoader::getAnimation(NodeRecord* model, Deformer* defo) {
-	//Lcl Translation, Lcl Rotation, Lcl ScalingŽæ“¾
-	for (unsigned int i = 0; i < model->NumChildren; i++) {
-		if (!strcmp(model->nodeChildren[i].className, "Properties70")) {
-			NodeRecord* pro70 = &model->nodeChildren[i];
-			for (unsigned int i1 = 0; i1 < pro70->NumChildren; i1++) {
-				getLcl(&pro70->nodeChildren[i1], defo->Translation, "Lcl Translation");
-				getLcl(&pro70->nodeChildren[i1], defo->Rotation, "Lcl Rotation");
-				getLcl(&pro70->nodeChildren[i1], defo->Scaling, "Lcl Scaling");
-			}
-		}
-	}
 	//AnimationŠÖ˜A
 	unsigned int animInd[3] = {};
 	for (unsigned int i = 0; i < model->connectionNode.size(); i++) {
