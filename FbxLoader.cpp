@@ -583,6 +583,7 @@ void FbxLoader::getSubDeformer(NodeRecord* node, FbxMeshNode* mesh) {
 		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
 			NodeRecord* n1 = node->connectionNode[i];
 			if (!strcmp(n1->className, "Model")) {//Ž©g‚ÌModel
+				getLcl(n1, defo->lcl);
 				getAnimation(n1, defo);
 			}
 		}
@@ -813,6 +814,20 @@ void FbxLoader::getMaterial(NodeRecord* node, FbxMeshNode* mesh, unsigned int* m
 	}
 }
 
+void FbxLoader::getLcl(NodeRecord* model, Lcl& lcl) {
+	for (unsigned int i = 0; i < model->NumChildren; i++) {
+		NodeRecord* n1 = &model->nodeChildren[i];
+		if (!strcmp(n1->className, "Properties70")) {
+			for (unsigned int i1 = 0; i1 < n1->NumChildren; i1++) {
+				NodeRecord* n2 = &n1->nodeChildren[i1];
+				getPropertiesDouble(n2, lcl.Translation, 3, "Lcl Translation");
+				getPropertiesDouble(n2, lcl.Rotation, 3, "Lcl Rotation");
+				getPropertiesDouble(n2, lcl.Scaling, 3, "Lcl Scaling");
+			}
+		}
+	}
+}
+
 void FbxLoader::getMesh() {
 	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
 		if (!strcmp(rootNode->connectionNode[i]->className, "Model") &&
@@ -829,6 +844,7 @@ void FbxLoader::getMesh() {
 		NodeRecord* n1 = rootNode->connectionNode[i];
 		if (!strcmp(n1->className, "Model") &&
 			!strcmp(n1->nodeName[1], "Mesh")) {
+			getLcl(n1, Mesh[mecnt].lcl);
 			for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
 				NodeRecord* n2 = n1->connectionNode[i1];
 				getGeometry(n2, &Mesh[mecnt]);
@@ -848,6 +864,7 @@ void FbxLoader::getMesh() {
 				for (unsigned int j = 0; j < NumMesh; j++) {
 					Mesh[j].rootDeformer = new Deformer();
 					Deformer* defo = Mesh[j].rootDeformer;
+					getLcl(n1, defo->lcl);
 					int len = (int)strlen(n1->nodeName[0]);
 					defo->name = new char[len + 1];
 					strcpy(defo->name, n1->nodeName[0]);
@@ -905,6 +922,7 @@ void FbxLoader::setParentPointerOfNoneMeshSubDeformer() {
 void FbxLoader::getNoneMeshSubDeformer(NodeRecord* node) {
 	if (!strcmp(node->className, "Model")) {
 		deformer[NumDeformer] = new Deformer();
+		getLcl(node, deformer[NumDeformer]->lcl);
 		Deformer* defo = deformer[NumDeformer];
 		NumDeformer++;
 		int len = (int)strlen(node->nodeName[0]);
@@ -930,6 +948,7 @@ void FbxLoader::getNoneMeshDeformer() {
 		if (!strcmp(n1->className, "Model") && n1->nodeName[1]) {
 			if (!strcmp(n1->nodeName[1], "Root") || !strcmp(n1->nodeName[1], "Limb") || !strcmp(n1->nodeName[1], "Null")) {
 				rootDeformer = new Deformer();
+				getLcl(n1, rootDeformer->lcl);
 				int len = (int)strlen(n1->nodeName[0]);
 				rootDeformer->name = new char[len + 1];
 				strcpy(rootDeformer->name, n1->nodeName[0]);

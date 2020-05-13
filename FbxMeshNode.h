@@ -74,6 +74,12 @@ private:
 	double getKeyValue(int64_t time);
 };
 
+struct Lcl {
+	double Translation[3] = {};
+	double Rotation[3] = {};
+	double Scaling[3] = {};
+};
+
 class Deformer {
 
 private:
@@ -97,6 +103,8 @@ private:
 	AnimationCurve* Translation = nullptr;
 	AnimationCurve* Rotation = nullptr;
 	AnimationCurve* Scaling = nullptr;
+
+	Lcl lcl = {};
 
 	void MatrixScaling(double mat[16], double sx, double sy, double sz);
 	void MatrixRotationX(double mat[16], double theta);
@@ -139,6 +147,7 @@ public:
 	double* getLocalPose() { return LocalPose; }
 	double* getGlobalPose() { return GlobalPose; }
 	Deformer* getParentNode() { return parentNode; }
+	Lcl getLcl() { return lcl; }
 };
 
 class TextureName {
@@ -201,6 +210,7 @@ private:
 	unsigned int NumDeformer = 0;
 	Deformer* deformer[256] = { nullptr };
 	Deformer* rootDeformer = nullptr;
+	Lcl lcl = {};
 
 public:
 	~FbxMeshNode();
@@ -258,6 +268,8 @@ public:
 	//Deformer
 	unsigned int getNumDeformer();
 	Deformer* getDeformer(unsigned int index);
+
+	Lcl getLcl() { return lcl; }
 };
 
 #endif
