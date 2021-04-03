@@ -21,6 +21,7 @@ private:
 
 public:
 	~FilePointer();
+	bool versionSw = false;
 	bool setFile(char* pass);
 	void setCharArray(char* cArray, int size);//FILE使わないで読み込む時使用
 	unsigned int getPos();
@@ -29,6 +30,8 @@ public:
 	void fRead(char* dst, int byteSize);
 	unsigned int convertBYTEtoUINT();
 	uint64_t convertBYTEtoUINT64();
+	unsigned int convertBYTEtoUINT32or64();
+	void backPointer4or8();
 };
 
 class FbxLoader;
@@ -100,7 +103,7 @@ private:
 
 	void searchName_Type(std::vector<ConnectionNo>& cn, uint64_t PropertyListLen);
 	void createConnectionList(std::vector<ConnectionList>& cnLi, char* nodeName1);
-	void set(bool version7500, FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi);
+	void set(FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi);
 	~NodeRecord();
 };
 
@@ -127,7 +130,6 @@ class FbxLoader {
 private:
 	friend NodeRecord;
 	unsigned int version = 0;//23から26バイトまで4バイト分符号なし整数,リトルエンディアン(下から読む)
-	bool convertByteRangeSwitch = false;//読み込みバイト数切り替え, FBX7400以下4byte, FBX7500以上は8byte
 	NodeRecord FbxRecord;//ファイルそのまま
 	NodeRecord* rootNode = nullptr;//ConnectionID:0のポインタ
 	std::vector<ConnectionNo> cnNo;

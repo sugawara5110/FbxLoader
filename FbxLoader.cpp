@@ -74,6 +74,18 @@ uint64_t FilePointer::convertBYTEtoUINT64() {
 	return ret;
 }
 
+unsigned int FilePointer::convertBYTEtoUINT32or64() {
+	if (versionSw)return (unsigned int)convertBYTEtoUINT64();
+	return convertBYTEtoUINT();
+}
+
+void FilePointer::backPointer4or8() {
+	if (versionSw)
+		pointer -= 8;
+	else
+		pointer -= 4;
+}
+
 static unsigned int convertUCHARtoUINT(unsigned char* arr) {
 	return ((unsigned int)arr[3] << 24) | ((unsigned int)arr[2] << 16) |
 		((unsigned int)arr[1] << 8) | ((unsigned int)arr[0]);
@@ -217,21 +229,14 @@ void NodeRecord::createConnectionList(std::vector<ConnectionList>& cnLi, char* n
 	cnLi.push_back(cl);
 }
 
-void NodeRecord::set(bool version7500, FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi) {
+void NodeRecord::set(FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi) {
 	unsigned int EndOffset = 0;//次のファイルの先頭バイト数 
 	unsigned int NumProperties = 0;//プロパティの数
 	unsigned int PropertyListLen = 0;//プロパティリストの大きさ(byte)
 	//上記3パラメーターはFBX7400以下4byte, FBX7500以上は8byte
-	if (version7500) {
-		EndOffset = (unsigned int)fp->convertBYTEtoUINT64();
-		NumProperties = (unsigned int)fp->convertBYTEtoUINT64();
-		PropertyListLen = (unsigned int)fp->convertBYTEtoUINT64();
-	}
-	else {
-		EndOffset = fp->convertBYTEtoUINT();
-		NumProperties = fp->convertBYTEtoUINT();
-		PropertyListLen = fp->convertBYTEtoUINT();
-	}
+	EndOffset = fp->convertBYTEtoUINT32or64();
+	NumProperties = fp->convertBYTEtoUINT32or64();
+	PropertyListLen = fp->convertBYTEtoUINT32or64();
 
 	classNameLen = fp->getByte();
 	className = new char[classNameLen + 1];
@@ -249,21 +254,21 @@ void NodeRecord::set(bool version7500, FilePointer* fp, std::vector<ConnectionNo
 	unsigned int curpos = fp->getPos();
 	//現在のファイルポインタがEndOffsetより手前,かつ
 	//現ファイルポインタから4byteが全て0ではない場合, 子ノード有り
-	if (EndOffset > curpos && fp->convertBYTEtoUINT() != 0) {
+	if (EndOffset > curpos && fp->convertBYTEtoUINT32or64() != 0) {
 		unsigned int topChildPointer = curpos;
 		unsigned int childEndOffset = 0;
 		//子ノードEndOffsetをたどり,個数カウント
 		do {
-			fp->seekPointer(fp->getPos() - 4);//"convertBYTEtoUINT() != 0"の分戻す
+			fp->backPointer4or8();//"convertBYTEtoUINT() != 0"の分戻す
 			NumChildren++;
-			childEndOffset = fp->convertBYTEtoUINT();
+			childEndOffset = fp->convertBYTEtoUINT32or64();
 			fp->seekPointer(childEndOffset);
-		} while (EndOffset > childEndOffset && fp->convertBYTEtoUINT() != 0);
+		} while (EndOffset > childEndOffset && fp->convertBYTEtoUINT32or64() != 0);
 		//カウントが終わったので最初の子ノードのファイルポインタに戻す
 		fp->seekPointer(topChildPointer);
 		nodeChildren = new NodeRecord[NumChildren];
 		for (unsigned int i = 0; i < NumChildren; i++) {
-			nodeChildren[i].set(version7500, fp, cn, cnLi);
+			nodeChildren[i].set(fp, cn, cnLi);
 		}
 	}
 	//読み込みが終了したのでEndOffsetへポインタ移動
@@ -307,7 +312,7 @@ bool FbxLoader::fileCheck(FilePointer *fp) {
 void FbxLoader::searchVersion(FilePointer* fp) {
 	//バージョンは23-26バイトまで(4バイト分)リトルエンディアン(下の位から読んでいく)
 	version = fp->convertBYTEtoUINT();
-	if (version >= 7500)convertByteRangeSwitch = true;
+	if (version >= 7500)fp->versionSw = true;
 }
 
 void FbxLoader::readFBX(FilePointer* fp) {
@@ -316,12 +321,13 @@ void FbxLoader::readFBX(FilePointer* fp) {
 	unsigned int nodeCount = 0;
 	unsigned int endoffset = 0;
 
-	while (fp->convertBYTEtoUINT() != 0) {
-		fp->seekPointer(fp->getPos() - 4);//"convertBYTEtoUINT() != 0"の分戻す
+	while (fp->convertBYTEtoUINT32or64() != 0) {
+		fp->backPointer4or8();//"convertBYTEtoUINT() != 0"の分戻す
 		nodeCount++;
-		endoffset = fp->convertBYTEtoUINT();
+		endoffset = fp->convertBYTEtoUINT32or64();
 		fp->seekPointer(endoffset);
 	}
+
 	fp->seekPointer(curpos);
 
 	FbxRecord.classNameLen = 9;
@@ -331,7 +337,7 @@ void FbxLoader::readFBX(FilePointer* fp) {
 	FbxRecord.nodeChildren = new NodeRecord[nodeCount];
 
 	for (unsigned int i = 0; i < nodeCount; i++) {
-		FbxRecord.nodeChildren[i].set(convertByteRangeSwitch, fp, cnNo, cnLi);
+		FbxRecord.nodeChildren[i].set(fp, cnNo, cnLi);
 		NodeRecord* n1 = &FbxRecord.nodeChildren[i];
 		if (!strcmp(n1->className, "Definitions")) {
 			for (unsigned int i1 = 0; i1 < n1->NumChildren; i1++) {
