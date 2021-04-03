@@ -266,58 +266,72 @@ unsigned int FbxMeshNode::getNumMaterial() {
 
 //Material
 char* FbxMeshNode::getMaterialName(unsigned int Index) {
+	if (!material[Index])return nullptr;
 	return material[Index]->MaterialName;
 }
 
 int FbxMeshNode::getNumDiffuseTexture(unsigned int Index) {
+	if (!material[Index])return -1;
 	return material[Index]->NumDifTexture;
 }
 
 char* FbxMeshNode::getDiffuseTextureName(unsigned int Index, unsigned int texNo) {
+	if (!material[Index])return nullptr;
 	return material[Index]->textureDifName[texNo].name;
 }
 
 textureType FbxMeshNode::getDiffuseTextureType(unsigned int Index, unsigned int texNo) {
+	if (!material[Index])return textureType();
 	return material[Index]->textureDifName[texNo].type;
 }
 
 char* FbxMeshNode::getDiffuseTextureUVName(unsigned int Index, unsigned int texNo) {
+	if (!material[Index])return nullptr;
 	return material[Index]->textureDifName[texNo].UVname;
 }
 
 int FbxMeshNode::getNumNormalTexture(unsigned int Index) {
+	if (!material[Index])return 0;
 	return material[Index]->NumNorTexture;
 }
 
 char* FbxMeshNode::getNormalTextureName(unsigned int Index, unsigned int texNo) {
+	if (!material[Index])return nullptr;
 	return material[Index]->textureNorName[texNo].name;
 }
 
 char* FbxMeshNode::getNormalTextureUVName(unsigned int Index, unsigned int texNo) {
+	if (!material[Index])return nullptr;
 	return material[Index]->textureNorName[texNo].UVname;
 }
 
 double FbxMeshNode::getDiffuseColor(unsigned int Index, unsigned int ColIndex) {
+	if (!material[Index])return 0.0f;
 	return material[Index]->Diffuse[ColIndex];
 }
 
 double FbxMeshNode::getSpecularColor(unsigned int Index, unsigned int ColIndex) {
+	if (!material[Index])return 0.0f;
 	return material[Index]->Specular[ColIndex];
 }
 
 double FbxMeshNode::getAmbientColor(unsigned int Index, unsigned int ColIndex) {
+	if (!material[Index])return 0.0f;
 	return material[Index]->Ambient[ColIndex];
 }
 
 char* FbxMeshNode::getMaterialMappingInformationType(unsigned int layerIndex) {
+	if (!Material[layerIndex])return nullptr;
 	return Material[layerIndex]->MappingInformationType;
 }
 
 char* FbxMeshNode::getMaterialReferenceInformationType(unsigned int layerIndex) {
+	if (!Material[layerIndex])return nullptr;
 	return Material[layerIndex]->ReferenceInformationType;
 }
 
 int FbxMeshNode::getMaterialNoOfPolygon(unsigned int polygonNo, unsigned int layerIndex) {
+	if (!Material[layerIndex])return -1;
 	if (Material[layerIndex]->Nummaterialarr <= polygonNo)return 0;
 	return Material[layerIndex]->materials[polygonNo];
 }
@@ -328,22 +342,27 @@ int FbxMeshNode::getNumNormalObj() {
 }
 
 unsigned int FbxMeshNode::getNumNormal(unsigned int layerIndex) {
+	if (!Normals[layerIndex])return 0;
 	return Normals[layerIndex]->Numnormals;
 }
 
-char *FbxMeshNode::getNormalName(unsigned int layerIndex) {
+char* FbxMeshNode::getNormalName(unsigned int layerIndex) {
+	if (!Normals[layerIndex])return nullptr;
 	return Normals[layerIndex]->name;
 }
 
-char *FbxMeshNode::getNormalMappingInformationType(unsigned int layerIndex) {
+char* FbxMeshNode::getNormalMappingInformationType(unsigned int layerIndex) {
+	if (!Normals[layerIndex])return nullptr;
 	return Normals[layerIndex]->MappingInformationType;
 }
 
 char* FbxMeshNode::getNormalReferenceInformationType(unsigned int layerIndex) {
+	if (!Normals[layerIndex])return nullptr;
 	return Normals[layerIndex]->ReferenceInformationType;
 }
 
-double *FbxMeshNode::getNormal(unsigned int layerIndex) {
+double* FbxMeshNode::getNormal(unsigned int layerIndex) {
+	if (!Normals[layerIndex])return nullptr;
 	return Normals[layerIndex]->normals;
 }
 
@@ -353,34 +372,42 @@ int FbxMeshNode::getNumUVObj() {
 }
 
 unsigned int FbxMeshNode::getNumUV(unsigned int layerIndex) {
+	if (!UV[layerIndex])return 0;
 	return UV[layerIndex]->NumUV;
 }
 
-char *FbxMeshNode::getUVName(unsigned int layerIndex) {
+char* FbxMeshNode::getUVName(unsigned int layerIndex) {
+	if (!UV[layerIndex])return nullptr;
 	return UV[layerIndex]->name;
 }
 
-char *FbxMeshNode::getUVMappingInformationType(unsigned int layerIndex) {
+char* FbxMeshNode::getUVMappingInformationType(unsigned int layerIndex) {
+	if (!UV[layerIndex])return nullptr;
 	return UV[layerIndex]->MappingInformationType;
 }
 
 char* FbxMeshNode::getUVReferenceInformationType(unsigned int layerIndex) {
+	if (!UV[layerIndex])return nullptr;
 	return UV[layerIndex]->ReferenceInformationType;
 }
 
-double *FbxMeshNode::getUV(unsigned int layerIndex) {
+double* FbxMeshNode::getUV(unsigned int layerIndex) {
+	if (!UV[layerIndex])return nullptr;
 	return UV[layerIndex]->UV;
 }
 
 unsigned int FbxMeshNode::getNumUVindex(unsigned int layerIndex) {
+	if (!UV[layerIndex])return -1;
 	return UV[layerIndex]->NumUVindex;
 }
 
-int *FbxMeshNode::getUVindex(unsigned int layerIndex) {
+int* FbxMeshNode::getUVindex(unsigned int layerIndex) {
+	if (!UV[layerIndex])return nullptr;
 	return UV[layerIndex]->UVindex;
 }
 
-double *FbxMeshNode::getAlignedUV(unsigned int layerIndex) {
+double* FbxMeshNode::getAlignedUV(unsigned int layerIndex) {
+	if (!UV[layerIndex])return nullptr;
 	return UV[layerIndex]->AlignedUV;
 }
 

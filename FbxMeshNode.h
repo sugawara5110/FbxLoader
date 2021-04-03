@@ -158,7 +158,7 @@ private:
 	friend FbxMaterialNode;
 
 	char* name = nullptr;
-	textureType type;
+	textureType type = {};
 	char* UVname = nullptr;
 
 	~TextureName() {
@@ -178,9 +178,9 @@ private:
 	char* MaterialName = nullptr;
 	const static int numTex = 10;
 	int NumDifTexture = 0;
-	TextureName textureDifName[numTex];
+	TextureName textureDifName[numTex] = {};
 	int NumNorTexture = 0;
-	TextureName textureNorName[numTex];
+	TextureName textureNorName[numTex] = {};
 
 public:
 	~FbxMaterialNode() {

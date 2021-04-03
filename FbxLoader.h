@@ -17,24 +17,19 @@ class FilePointer {
 
 private:
 	unsigned int pointer = 0;
-	unsigned char *fileStr = nullptr;
+	unsigned char* fileStr = nullptr;
 
 public:
 	~FilePointer();
-	bool setFile(char *pass);
-	void setCharArray(char *cArray, int size);//FILE使わないで読み込む時使用
+	bool setFile(char* pass);
+	void setCharArray(char* cArray, int size);//FILE使わないで読み込む時使用
 	unsigned int getPos();
 	void seekPointer(unsigned int ind);
 	unsigned char getByte();
-	void fRead(char *dst, int byteSize);
+	void fRead(char* dst, int byteSize);
 	unsigned int convertBYTEtoUINT();
+	uint64_t convertBYTEtoUINT64();
 };
-
-unsigned int convertUCHARtoUINT(unsigned char *arr);
-int convertUCHARtoINT32(unsigned char *arr);
-int64_t convertUCHARtoint64(unsigned char *arr);
-unsigned long long convertUCHARtoUINT64(unsigned char *arr);
-double convertUCHARtoDouble(unsigned char *arr);
 
 class FbxLoader;
 class FbxMeshNode;
@@ -53,7 +48,7 @@ public:
 	int64_t ChildID = -1;
 	int64_t ParentID = -1;
 	//↓ChildIDに対して
-	textureType texType;
+	textureType texType = {};
 };
 
 class NodeRecord {
@@ -62,9 +57,6 @@ private:
 	friend FbxLoader;
 	friend FbxMeshNode;
 	//全てリトルエンディアン
-	unsigned int EndOffset = 0;//次のファイルの先頭バイト数
-	unsigned int NumProperties = 0;//プロパティの数
-	unsigned int PropertyListLen = 0;//プロパティリストの大きさ(byte)
 	unsigned char classNameLen = 0;
 	char* className = nullptr;
 	unsigned char* Property = nullptr;//(型type, そのdataの順で並んでる) * プロパティの数
@@ -98,7 +90,7 @@ private:
 	//Data:    Length byte
 	//の順で並んでる
 
-	textureType texType;
+	textureType texType = {};
 	char* nodeName[NUMNODENAME] = { nullptr };
 	unsigned int NumChildren = 0;
 	NodeRecord* nodeChildren = nullptr;//{}内のノード, NodeRecord実体配列用
@@ -106,9 +98,9 @@ private:
 	int64_t thisConnectionID = -1;
 	std::vector<NodeRecord*> connectionNode;//NodeRecordポインタ配列用
 
-	void searchName_Type(std::vector<ConnectionNo>& cn);
+	void searchName_Type(std::vector<ConnectionNo>& cn, uint64_t PropertyListLen);
 	void createConnectionList(std::vector<ConnectionList>& cnLi, char* nodeName1);
-	void set(FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi);
+	void set(bool version7500, FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi);
 	~NodeRecord();
 };
 
@@ -135,6 +127,7 @@ class FbxLoader {
 private:
 	friend NodeRecord;
 	unsigned int version = 0;//23から26バイトまで4バイト分符号なし整数,リトルエンディアン(下から読む)
+	bool convertByteRangeSwitch = false;//読み込みバイト数切り替え, FBX7400以下4byte, FBX7500以上は8byte
 	NodeRecord FbxRecord;//ファイルそのまま
 	NodeRecord* rootNode = nullptr;//ConnectionID:0のポインタ
 	std::vector<ConnectionNo> cnNo;
@@ -159,6 +152,9 @@ private:
 	void getDeformer(NodeRecord* node, FbxMeshNode* mesh);
 	void getGeometry(NodeRecord* node, FbxMeshNode* mesh);
 	void getMaterial(NodeRecord* node, FbxMeshNode* mesh, unsigned int* materialIndex);
+	void checkGeometry(NodeRecord* node, bool check[2]);
+	void checkMaterial(NodeRecord* node, bool* check);
+	bool checkMeshNodeRecord(NodeRecord* node);
 	void getMesh();
 	void setParentPointerOfNoneMeshSubDeformer();
 	void getNoneMeshSubDeformer(NodeRecord* node);

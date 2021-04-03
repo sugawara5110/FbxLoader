@@ -17,8 +17,8 @@ FilePointer::~FilePointer() {
 	}
 }
 
-bool FilePointer::setFile(char *pass) {
-	FILE *fp = fopen(pass, "rb");
+bool FilePointer::setFile(char* pass) {
+	FILE* fp = fopen(pass, "rb");
 	if (fp == NULL) {
 		return false;
 	}
@@ -65,46 +65,55 @@ unsigned int FilePointer::convertBYTEtoUINT() {
 	return ret;
 }
 
-unsigned int convertUCHARtoUINT(unsigned char *arr) {
+uint64_t FilePointer::convertBYTEtoUINT64() {
+	uint64_t ret = ((uint64_t)fileStr[7 + pointer] << 56) | ((uint64_t)fileStr[6 + pointer] << 48) |
+		((uint64_t)fileStr[5 + pointer] << 40) | ((uint64_t)fileStr[4 + pointer] << 32) |
+		((uint64_t)fileStr[3 + pointer] << 24) | ((uint64_t)fileStr[2 + pointer] << 16) |
+		((uint64_t)fileStr[1 + pointer] << 8) | ((uint64_t)fileStr[0 + pointer]);
+	pointer += 8;
+	return ret;
+}
+
+static unsigned int convertUCHARtoUINT(unsigned char* arr) {
 	return ((unsigned int)arr[3] << 24) | ((unsigned int)arr[2] << 16) |
 		((unsigned int)arr[1] << 8) | ((unsigned int)arr[0]);
 }
 
-int convertUCHARtoINT32(unsigned char *arr) {
+static int convertUCHARtoINT32(unsigned char* arr) {
 	return ((int)arr[3] << 24) | ((int)arr[2] << 16) |
 		((int)arr[1] << 8) | ((int)arr[0]);
 }
 
-int64_t convertUCHARtoint64(unsigned char *arr) {
+static int64_t convertUCHARtoint64(unsigned char* arr) {
 	return ((int64_t)arr[7] << 56) | ((int64_t)arr[6] << 48) |
 		((int64_t)arr[5] << 40) | ((int64_t)arr[4] << 32) |
 		((int64_t)arr[3] << 24) | ((int64_t)arr[2] << 16) |
 		((int64_t)arr[1] << 8) | ((int64_t)arr[0]);
 }
 
-unsigned long long convertUCHARtoUINT64(unsigned char *arr) {
+static unsigned long long convertUCHARtoUINT64(unsigned char* arr) {
 	return ((unsigned long long)arr[7] << 56) | ((unsigned long long)arr[6] << 48) |
 		((unsigned long long)arr[5] << 40) | ((unsigned long long)arr[4] << 32) |
 		((unsigned long long)arr[3] << 24) | ((unsigned long long)arr[2] << 16) |
 		((unsigned long long)arr[1] << 8) | ((unsigned long long)arr[0]);
 }
 
-double convertUCHARtoDouble(unsigned char *arr) {
+static double convertUCHARtoDouble(unsigned char* arr) {
 	unsigned long long tmp = ((unsigned long long)arr[7] << 56) | ((unsigned long long)arr[6] << 48) |
 		((unsigned long long)arr[5] << 40) | ((unsigned long long)arr[4] << 32) |
 		((unsigned long long)arr[3] << 24) | ((unsigned long long)arr[2] << 16) |
 		((unsigned long long)arr[1] << 8) | ((unsigned long long)arr[0]);
 	//byte列そのままで型変換する
-	double *dp = reinterpret_cast<double*>(&tmp);
+	double* dp = reinterpret_cast<double*>(&tmp);
 	return *dp;
 }
 
-void NodeRecord::searchName_Type(std::vector<ConnectionNo>& cn) {
+void NodeRecord::searchName_Type(std::vector<ConnectionNo>& cn, uint64_t PropertyListLen) {
 	int swt = 0;
 	unsigned int ln = 0;
 	int nameNo = 0;
 	int addInd = 0;
-	unsigned char *pr = nullptr;
+	unsigned char* pr = nullptr;
 	unsigned char sw = 0;
 	for (unsigned int i = 0; i < PropertyListLen; i++) {
 		switch (swt) {
@@ -208,10 +217,22 @@ void NodeRecord::createConnectionList(std::vector<ConnectionList>& cnLi, char* n
 	cnLi.push_back(cl);
 }
 
-void NodeRecord::set(FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi) {
-	EndOffset = fp->convertBYTEtoUINT();
-	NumProperties = fp->convertBYTEtoUINT();
-	PropertyListLen = fp->convertBYTEtoUINT();
+void NodeRecord::set(bool version7500, FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi) {
+	unsigned int EndOffset = 0;//次のファイルの先頭バイト数 
+	unsigned int NumProperties = 0;//プロパティの数
+	unsigned int PropertyListLen = 0;//プロパティリストの大きさ(byte)
+	//上記3パラメーターはFBX7400以下4byte, FBX7500以上は8byte
+	if (version7500) {
+		EndOffset = (unsigned int)fp->convertBYTEtoUINT64();
+		NumProperties = (unsigned int)fp->convertBYTEtoUINT64();
+		PropertyListLen = (unsigned int)fp->convertBYTEtoUINT64();
+	}
+	else {
+		EndOffset = fp->convertBYTEtoUINT();
+		NumProperties = fp->convertBYTEtoUINT();
+		PropertyListLen = fp->convertBYTEtoUINT();
+	}
+
 	classNameLen = fp->getByte();
 	className = new char[classNameLen + 1];
 	fp->fRead(className, classNameLen);
@@ -219,7 +240,7 @@ void NodeRecord::set(FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector
 	if (PropertyListLen > 0) {
 		Property = new unsigned char[PropertyListLen];
 		fp->fRead((char*)Property, PropertyListLen);
-		searchName_Type(cn);
+		searchName_Type(cn, PropertyListLen);
 		if (!strcmp(className, "C") && (!strcmp(nodeName[0], "OO") || !strcmp(nodeName[0], "OP"))) {
 			createConnectionList(cnLi, nodeName[1]);
 		}
@@ -242,7 +263,7 @@ void NodeRecord::set(FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector
 		fp->seekPointer(topChildPointer);
 		nodeChildren = new NodeRecord[NumChildren];
 		for (unsigned int i = 0; i < NumChildren; i++) {
-			nodeChildren[i].set(fp, cn, cnLi);
+			nodeChildren[i].set(version7500, fp, cn, cnLi);
 		}
 	}
 	//読み込みが終了したのでEndOffsetへポインタ移動
@@ -283,9 +304,10 @@ bool FbxLoader::fileCheck(FilePointer *fp) {
 	return true;
 }
 
-void FbxLoader::searchVersion(FilePointer *fp) {
+void FbxLoader::searchVersion(FilePointer* fp) {
 	//バージョンは23-26バイトまで(4バイト分)リトルエンディアン(下の位から読んでいく)
 	version = fp->convertBYTEtoUINT();
+	if (version >= 7500)convertByteRangeSwitch = true;
 }
 
 void FbxLoader::readFBX(FilePointer* fp) {
@@ -309,7 +331,7 @@ void FbxLoader::readFBX(FilePointer* fp) {
 	FbxRecord.nodeChildren = new NodeRecord[nodeCount];
 
 	for (unsigned int i = 0; i < nodeCount; i++) {
-		FbxRecord.nodeChildren[i].set(fp, cnNo, cnLi);
+		FbxRecord.nodeChildren[i].set(convertByteRangeSwitch, fp, cnNo, cnLi);
 		NodeRecord* n1 = &FbxRecord.nodeChildren[i];
 		if (!strcmp(n1->className, "Definitions")) {
 			for (unsigned int i1 = 0; i1 < n1->NumChildren; i1++) {
@@ -551,9 +573,10 @@ bool FbxLoader::nameComparison(char *name1, char *name2) {
 	return false;
 }
 
-void FbxLoader::setParentPointerOfSubDeformer(FbxMeshNode *mesh) {
+void FbxLoader::setParentPointerOfSubDeformer(FbxMeshNode* mesh) {
+	if (mesh->NumDeformer <= 0)return;
 	for (unsigned int i = 0; i < mesh->NumDeformer + 1; i++) {
-		Deformer *defo = nullptr;
+		Deformer* defo = nullptr;
 		if (i < mesh->NumDeformer)
 			defo = mesh->deformer[i];
 		else
@@ -828,11 +851,57 @@ void FbxLoader::getLcl(NodeRecord* model, Lcl& lcl) {
 	}
 }
 
+void FbxLoader::checkGeometry(NodeRecord* node, bool check[2]) {
+	if (!strcmp(node->className, "Geometry")) {
+		for (unsigned int i = 0; i < node->NumChildren; i++) {
+			NodeRecord* n1 = &node->nodeChildren[i];
+
+			//頂点
+			if (!strcmp(n1->className, "Vertices")) {
+				check[0] = true;
+			}
+
+			//頂点インデックス
+			if (!strcmp(n1->className, "PolygonVertexIndex")) {
+				check[1] = true;
+			}
+		}
+	}
+}
+
+void FbxLoader::checkMaterial(NodeRecord* node, bool* check) {
+	if (!strcmp(node->className, "Material")) {
+		*check = true;
+	}
+}
+
+bool FbxLoader::checkMeshNodeRecord(NodeRecord* node) {
+	bool check[3] = { false,false,false };
+	for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
+		NodeRecord* n = node->connectionNode[i];
+		checkGeometry(n, check);
+		checkMaterial(n, &check[2]);
+	}
+	if (check[0] && check[1] && check[2])return true;
+	return false;
+}
+
 void FbxLoader::getMesh() {
 	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
-		if (!strcmp(rootNode->connectionNode[i]->className, "Model") &&
-			!strcmp(rootNode->connectionNode[i]->nodeName[1], "Mesh")) {
-			NumMesh++;
+		NodeRecord* n1 = rootNode->connectionNode[i];
+		if (!strcmp(n1->className, "Model") &&
+			!strcmp(n1->nodeName[1], "Mesh")) {
+			if (checkMeshNodeRecord(n1))NumMesh++;
+		}
+		if (!strcmp(n1->className, "Model") &&
+			!strcmp(n1->nodeName[1], "Null")) {//Nullの下にMeshがある場合もある
+			for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
+				NodeRecord* n2 = n1->connectionNode[i1];
+				if (!strcmp(n2->className, "Model") &&
+					!strcmp(n2->nodeName[1], "Mesh")) {
+					if (checkMeshNodeRecord(n2))NumMesh++;
+				}
+			}
 		}
 	}
 	if (NumMesh <= 0)return;
@@ -844,15 +913,37 @@ void FbxLoader::getMesh() {
 		NodeRecord* n1 = rootNode->connectionNode[i];
 		if (!strcmp(n1->className, "Model") &&
 			!strcmp(n1->nodeName[1], "Mesh")) {
-			getLcl(n1, Mesh[mecnt].lcl);
+			if (checkMeshNodeRecord(n1)) {
+				getLcl(n1, Mesh[mecnt].lcl);
+				for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
+					NodeRecord* n2 = n1->connectionNode[i1];
+					getGeometry(n2, &Mesh[mecnt]);
+					getMaterial(n2, &Mesh[mecnt], &matcnt);
+				}
+				Mesh[mecnt].NumMaterial = matcnt;
+				mecnt++;
+				matcnt = 0;
+			}
+		}
+		if (!strcmp(n1->className, "Model") &&
+			!strcmp(n1->nodeName[1], "Null")) {
 			for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
 				NodeRecord* n2 = n1->connectionNode[i1];
-				getGeometry(n2, &Mesh[mecnt]);
-				getMaterial(n2, &Mesh[mecnt], &matcnt);
+				if (!strcmp(n2->className, "Model") &&
+					!strcmp(n2->nodeName[1], "Mesh")) {
+					if (checkMeshNodeRecord(n2)) {
+						getLcl(n2, Mesh[mecnt].lcl);
+						for (unsigned int i2 = 0; i2 < n2->connectionNode.size(); i2++) {
+							NodeRecord* n3 = n2->connectionNode[i2];
+							getGeometry(n3, &Mesh[mecnt]);
+							getMaterial(n3, &Mesh[mecnt], &matcnt);
+						}
+						Mesh[mecnt].NumMaterial = matcnt;
+						mecnt++;
+						matcnt = 0;
+					}
+				}
 			}
-			Mesh[mecnt].NumMaterial = matcnt;
-			mecnt++;
-			matcnt = 0;
 		}
 	}
 
@@ -862,20 +953,22 @@ void FbxLoader::getMesh() {
 		if (!strcmp(n1->className, "Model") && n1->nodeName[1]) {
 			if (!strcmp(n1->nodeName[1], "Root") || !strcmp(n1->nodeName[1], "Limb") || !strcmp(n1->nodeName[1], "Null")) {
 				for (unsigned int j = 0; j < NumMesh; j++) {
-					Mesh[j].rootDeformer = new Deformer();
-					Deformer* defo = Mesh[j].rootDeformer;
-					getLcl(n1, defo->lcl);
-					int len = (int)strlen(n1->nodeName[0]);
-					defo->name = new char[len + 1];
-					strcpy(defo->name, n1->nodeName[0]);
-					getAnimation(n1, defo);
-					//子ノードのModelName登録
-					for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
-						NodeRecord* n2 = n1->connectionNode[i1];
-						if (!strcmp(n2->className, "Model")) {
-							int ln = (int)strlen(n2->nodeName[0]);
-							defo->childName[defo->NumChild] = new char[ln + 1];
-							strcpy(defo->childName[defo->NumChild++], n2->nodeName[0]);
+					if (Mesh[j].NumDeformer > 0) {
+						Mesh[j].rootDeformer = new Deformer();
+						Deformer* defo = Mesh[j].rootDeformer;
+						getLcl(n1, defo->lcl);
+						int len = (int)strlen(n1->nodeName[0]);
+						defo->name = new char[len + 1];
+						strcpy(defo->name, n1->nodeName[0]);
+						getAnimation(n1, defo);
+						//子ノードのModelName登録
+						for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
+							NodeRecord* n2 = n1->connectionNode[i1];
+							if (!strcmp(n2->className, "Model")) {
+								int ln = (int)strlen(n2->nodeName[0]);
+								defo->childName[defo->NumChild] = new char[ln + 1];
+								strcpy(defo->childName[defo->NumChild++], n2->nodeName[0]);
+							}
 						}
 					}
 				}
@@ -889,11 +982,17 @@ void FbxLoader::getMesh() {
 		for (int i1 = 0; i1 < Mesh[i].NumMaterial; i1++) {
 			LayerElement* uv = Mesh[i].UV[i1];
 			if (uv == nullptr)break;
-			uv->AlignedUV = new double[uv->NumUVindex * 2];
-			unsigned int cnt = 0;
-			for (unsigned int i2 = 0; i2 < uv->NumUVindex; i2++) {
-				uv->AlignedUV[cnt++] = uv->UV[uv->UVindex[i2] * 2];//UVindexはUVの2値を一組としてのインデックスなので×2で計算
-				uv->AlignedUV[cnt++] = uv->UV[uv->UVindex[i2] * 2 + 1];
+			if (uv->NumUVindex > 0) {
+				uv->AlignedUV = new double[uv->NumUVindex * 2];
+				unsigned int cnt = 0;
+				for (unsigned int i2 = 0; i2 < uv->NumUVindex; i2++) {
+					uv->AlignedUV[cnt++] = uv->UV[uv->UVindex[i2] * 2];//UVindexはUVの2値を一組としてのインデックスなので×2で計算
+					uv->AlignedUV[cnt++] = uv->UV[uv->UVindex[i2] * 2 + 1];
+				}
+			}
+			else {
+				uv->AlignedUV = new double[uv->NumUV];
+				memcpy(uv->AlignedUV, uv->UV, uv->NumUV * sizeof(double));
 			}
 		}
 		setParentPointerOfSubDeformer(&Mesh[i]);
@@ -1188,7 +1287,8 @@ unsigned int FbxLoader::getNumFbxMeshNode() {
 	return NumMesh;
 }
 
-FbxMeshNode *FbxLoader::getFbxMeshNode(unsigned int index) {
+FbxMeshNode* FbxLoader::getFbxMeshNode(unsigned int index) {
+	if (!Mesh)return nullptr;
 	return &Mesh[index];
 }
 
