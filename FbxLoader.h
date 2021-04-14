@@ -136,8 +136,9 @@ private:
 	std::vector<ConnectionList> cnLi;
 	unsigned int NumMesh = 0;
 	FbxMeshNode* Mesh = nullptr;
+	FbxMeshNode* singleMesh = nullptr;
 	unsigned int NumDeformer = 0;
-	Deformer* deformer[256] = { nullptr };//デフォーマーのみのファイル対応
+	Deformer** deformer = { nullptr };//デフォーマーのみのファイル対応
 	Deformer* rootDeformer = nullptr;
 	int numAnimation = 0;
 	GlobalSettings Gset = {};
@@ -146,10 +147,13 @@ private:
 	void searchVersion(FilePointer* fp);
 	void readFBX(FilePointer* fp);
 	bool Decompress(NodeRecord* node, unsigned char** output, unsigned int* outSize, unsigned int typeSize);
+	void getLayerElementCounter(NodeRecord* node, FbxMeshNode* mesh);
 	void getLayerElementSub(NodeRecord* node, LayerElement* le);
 	void getLayerElement(NodeRecord* node, FbxMeshNode* mesh);
 	bool nameComparison(char* name1, char* name2);
 	void setParentPointerOfSubDeformer(FbxMeshNode* mesh);
+	void getSubDeformerCounter(NodeRecord* node, FbxMeshNode* mesh);
+	void getDeformerCounter(NodeRecord* node, FbxMeshNode* mesh);
 	void getSubDeformer(NodeRecord* node, FbxMeshNode* mesh);
 	void getDeformer(NodeRecord* node, FbxMeshNode* mesh);
 	void getGeometry(NodeRecord* node, FbxMeshNode* mesh);
@@ -157,10 +161,14 @@ private:
 	void checkGeometry(NodeRecord* node, bool check[2]);
 	void checkMaterial(NodeRecord* node, bool* check);
 	bool checkMeshNodeRecord(NodeRecord* node);
+	void getGeometryCounter(NodeRecord* node, FbxMeshNode* mesh);
+	void getMaterialCounter(NodeRecord* node, FbxMeshNode* mesh);
 	void getMesh();
 	void setParentPointerOfNoneMeshSubDeformer();
+	void getNoneMeshSubDeformerCounter(NodeRecord* node);
+	void getNoneMeshDeformerCounter();
 	void getNoneMeshSubDeformer(NodeRecord* node);
-	void getNoneMeshDeformer();
+	void GetNoneMeshDeformer();
 	void getCol(NodeRecord* pro70Child, double Col[3], char* ColStr);
 	void getAnimationCurve(unsigned int& animInd, NodeRecord* animNode, AnimationCurve* anim, char* Lcl);
 	void getAnimation(NodeRecord* model, Deformer* defo);
@@ -189,6 +197,7 @@ public:
 	int getVersion();
 	void drawRecord();
 	void drawNode();
+	void createFbxSingleMeshNode();
 };
 
 #endif

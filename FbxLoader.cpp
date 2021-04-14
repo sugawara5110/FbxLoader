@@ -519,6 +519,12 @@ void FbxLoader::getLayerElementSub(NodeRecord* node, LayerElement* le) {
 	}
 }
 
+void FbxLoader::getLayerElementCounter(NodeRecord* node, FbxMeshNode* mesh) {
+	if (!strcmp(node->className, "LayerElementUV")) {
+		mesh->NumUVObj++;
+	}
+}
+
 void FbxLoader::getLayerElement(NodeRecord* node, FbxMeshNode* mesh) {
 	if (!strcmp(node->className, "LayerElementMaterial")) {
 		int No = convertUCHARtoINT32(&node->Property[1]);//たぶんレイヤーNo取得
@@ -538,7 +544,6 @@ void FbxLoader::getLayerElement(NodeRecord* node, FbxMeshNode* mesh) {
 		mesh->UV[No] = new LayerElement();
 		LayerElement* uv = mesh->UV[No];
 		getLayerElementSub(node, uv);
-		mesh->NumUVObj++;
 	}
 }
 
@@ -892,6 +897,46 @@ bool FbxLoader::checkMeshNodeRecord(NodeRecord* node) {
 	return false;
 }
 
+void FbxLoader::getSubDeformerCounter(NodeRecord* node, FbxMeshNode* mesh) {
+	if (!strcmp(node->className, "Deformer")) {
+		mesh->NumDeformer++;//Deformer数カウント
+	}
+}
+
+void FbxLoader::getDeformerCounter(NodeRecord* node, FbxMeshNode* mesh) {
+	if (!strcmp(node->className, "Deformer")) {
+		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
+			NodeRecord* n1 = node->connectionNode[i];
+			//各Deformer情報取得
+			getSubDeformerCounter(n1, mesh);
+		}
+	}
+}
+
+void FbxLoader::getGeometryCounter(NodeRecord* node, FbxMeshNode* mesh) {
+	if (!strcmp(node->className, "Geometry")) {
+		for (unsigned int i = 0; i < node->NumChildren; i++) {
+			NodeRecord* n1 = &node->nodeChildren[i];
+
+			//Normal, UV
+			getLayerElementCounter(n1, mesh);
+		}
+
+		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
+			NodeRecord* n1 = node->connectionNode[i];
+
+			//ボーン関連
+			getDeformerCounter(n1, mesh);
+		}
+	}
+}
+
+void FbxLoader::getMaterialCounter(NodeRecord* node, FbxMeshNode* mesh) {
+	if (!strcmp(node->className, "Material")) {
+		mesh->NumMaterial++;
+	}
+}
+
 void FbxLoader::getMesh() {
 	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
 		NodeRecord* n1 = rootNode->connectionNode[i];
@@ -914,6 +959,48 @@ void FbxLoader::getMesh() {
 	Mesh = new FbxMeshNode[NumMesh];
 
 	unsigned int mecnt = 0;
+	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
+		NodeRecord* n1 = rootNode->connectionNode[i];
+		if (!strcmp(n1->className, "Model") &&
+			!strcmp(n1->nodeName[1], "Mesh")) {
+			if (checkMeshNodeRecord(n1)) {
+				getLcl(n1, Mesh[mecnt].lcl);
+				for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
+					NodeRecord* n2 = n1->connectionNode[i1];
+					getGeometryCounter(n2, &Mesh[mecnt]);
+					getMaterialCounter(n2, &Mesh[mecnt]);
+				}
+				mecnt++;
+			}
+		}
+		if (!strcmp(n1->className, "Model") &&
+			!strcmp(n1->nodeName[1], "Null")) {
+			for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
+				NodeRecord* n2 = n1->connectionNode[i1];
+				if (!strcmp(n2->className, "Model") &&
+					!strcmp(n2->nodeName[1], "Mesh")) {
+					if (checkMeshNodeRecord(n2)) {
+						getLcl(n2, Mesh[mecnt].lcl);
+						for (unsigned int i2 = 0; i2 < n2->connectionNode.size(); i2++) {
+							NodeRecord* n3 = n2->connectionNode[i2];
+							getGeometryCounter(n3, &Mesh[mecnt]);
+							getMaterialCounter(n3, &Mesh[mecnt]);
+						}
+						mecnt++;
+					}
+				}
+			}
+		}
+	}
+
+	for (unsigned int i = 0; i < NumMesh; i++) {
+		Mesh[i].material = new FbxMaterialNode * [Mesh[i].NumMaterial];
+		Mesh[i].UV = new LayerElement * [Mesh[i].NumUVObj];
+		Mesh[i].deformer = new Deformer * [Mesh[i].NumDeformer];
+		Mesh[i].NumDeformer = 0;//この後にカウンターとして使うので0に初期化
+	}
+
+	mecnt = 0;
 	unsigned int matcnt = 0;
 	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
 		NodeRecord* n1 = rootNode->connectionNode[i];
@@ -926,7 +1013,6 @@ void FbxLoader::getMesh() {
 					getGeometry(n2, &Mesh[mecnt]);
 					getMaterial(n2, &Mesh[mecnt], &matcnt);
 				}
-				Mesh[mecnt].NumMaterial = matcnt;
 				mecnt++;
 				matcnt = 0;
 			}
@@ -944,7 +1030,6 @@ void FbxLoader::getMesh() {
 							getGeometry(n3, &Mesh[mecnt]);
 							getMaterial(n3, &Mesh[mecnt], &matcnt);
 						}
-						Mesh[mecnt].NumMaterial = matcnt;
 						mecnt++;
 						matcnt = 0;
 					}
@@ -985,7 +1070,7 @@ void FbxLoader::getMesh() {
 
 	//UV整列
 	for (unsigned int i = 0; i < NumMesh; i++) {
-		for (int i1 = 0; i1 < Mesh[i].NumMaterial; i1++) {
+		for (int i1 = 0; i1 < Mesh[i].NumUVObj; i1++) {
 			LayerElement* uv = Mesh[i].UV[i1];
 			if (uv == nullptr)break;
 			if (uv->NumUVindex > 0) {
@@ -1006,8 +1091,9 @@ void FbxLoader::getMesh() {
 }
 
 void FbxLoader::setParentPointerOfNoneMeshSubDeformer() {
+	if (NumDeformer <= 0)return;
 	for (unsigned int i = 0; i < NumDeformer + 1; i++) {
-		Deformer *defo = nullptr;
+		Deformer* defo = nullptr;
 		if (i < NumDeformer)
 			defo = deformer[i];
 		else
@@ -1019,6 +1105,35 @@ void FbxLoader::setParentPointerOfNoneMeshSubDeformer() {
 				if (nameComparison(defo->childName[i1], deformer[i2]->name)) {
 					deformer[i2]->parentNode = defo;
 				}
+			}
+		}
+	}
+}
+
+void FbxLoader::getNoneMeshSubDeformerCounter(NodeRecord* node) {
+	if (!strcmp(node->className, "Model")) {
+		NumDeformer++;
+		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
+			NodeRecord* n1 = node->connectionNode[i];
+			if (!strcmp(n1->className, "Model")) {
+				getNoneMeshSubDeformerCounter(n1);
+			}
+		}
+	}
+}
+
+void FbxLoader::getNoneMeshDeformerCounter() {
+	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
+		NodeRecord* n1 = rootNode->connectionNode[i];
+		if (!strcmp(n1->className, "Model") && n1->nodeName[1]) {
+			if (!strcmp(n1->nodeName[1], "Root") || !strcmp(n1->nodeName[1], "Limb") || !strcmp(n1->nodeName[1], "Null")) {
+				for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
+					NodeRecord* n2 = n1->connectionNode[i1];
+					if (!strcmp(n2->className, "Model")) {
+						getNoneMeshSubDeformerCounter(n2);
+					}
+				}
+				break;
 			}
 		}
 	}
@@ -1047,7 +1162,7 @@ void FbxLoader::getNoneMeshSubDeformer(NodeRecord* node) {
 	}
 }
 
-void FbxLoader::getNoneMeshDeformer() {
+void FbxLoader::GetNoneMeshDeformer() {
 	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
 		NodeRecord* n1 = rootNode->connectionNode[i];
 		if (!strcmp(n1->className, "Model") && n1->nodeName[1]) {
@@ -1252,32 +1367,44 @@ void FbxLoader::drawname(NodeRecord* node, bool cnNode) {
 
 FbxLoader::~FbxLoader() {
 	aDELETE(Mesh);
+	sDELETE(singleMesh);
 	std::vector<ConnectionNo>().swap(cnNo);//解放
 	std::vector<ConnectionList>().swap(cnLi);//解放
 	rootNode = nullptr;
 	for (unsigned int i = 0; i < NumDeformer; i++)sDELETE(deformer[i]);
+	aDELETE(deformer);
 	sDELETE(rootDeformer);
 }
 
-bool FbxLoader::setFbxFile(char *pass) {
+bool FbxLoader::setFbxFile(char* pass) {
 	FilePointer fp;
 	if (!fp.setFile(pass))return false;
 	if (!fileCheck(&fp))return false;
 	searchVersion(&fp);
 	readFBX(&fp);
 	getMesh();
-	if (NumMesh <= 0)getNoneMeshDeformer();
+	if (NumMesh <= 0) {
+		getNoneMeshDeformerCounter();
+		deformer = new Deformer * [NumDeformer];
+		NumDeformer = 0;
+		GetNoneMeshDeformer();
+	}
 	return true;
 }
 
-bool FbxLoader::setBinaryInFbxFile(char *strArray, int size) {
+bool FbxLoader::setBinaryInFbxFile(char* strArray, int size) {
 	FilePointer fp;
 	fp.setCharArray(strArray, size);
 	if (!fileCheck(&fp))return false;
 	searchVersion(&fp);
 	readFBX(&fp);
 	getMesh();
-	if (NumMesh <= 0)getNoneMeshDeformer();
+	if (NumMesh <= 0) {
+		getNoneMeshDeformerCounter();
+		deformer = new Deformer * [NumDeformer];
+		NumDeformer = 0;
+		GetNoneMeshDeformer();
+	}
 	return true;
 }
 
@@ -1294,8 +1421,9 @@ unsigned int FbxLoader::getNumFbxMeshNode() {
 }
 
 FbxMeshNode* FbxLoader::getFbxMeshNode(unsigned int index) {
-	if (!Mesh)return nullptr;
-	return &Mesh[index];
+	if (Mesh)return &Mesh[index];
+	if (singleMesh)return singleMesh;
+	return nullptr;
 }
 
 unsigned int FbxLoader::getNumNoneMeshDeformer() {
@@ -1316,4 +1444,182 @@ void FbxLoader::drawRecord() {
 
 void FbxLoader::drawNode() {
 	drawname(rootNode, true);
+}
+
+void FbxLoader::createFbxSingleMeshNode() {
+	singleMesh = new FbxMeshNode();
+	for (unsigned int i = 0; i < NumMesh; i++) {
+		singleMesh->NumVertices += Mesh[i].NumVertices;
+		singleMesh->NumPolygonVertices += Mesh[i].NumPolygonVertices;
+		singleMesh->NumPolygon += Mesh[i].NumPolygon;
+		singleMesh->NumMaterial += Mesh[i].NumMaterial;
+	}
+	singleMesh->NumNormalsObj = Mesh[0].NumNormalsObj;
+	singleMesh->NumUVObj = Mesh[0].NumUVObj;
+	singleMesh->NumDeformer = Mesh[0].NumDeformer;
+
+	singleMesh->vertices = new double[singleMesh->NumVertices * 3];
+	singleMesh->polygonVertices = new int[singleMesh->NumPolygonVertices];
+	singleMesh->PolygonSize = new unsigned int[singleMesh->NumPolygon];
+
+	int verSizeCnt = 0;
+	int verCnt = 0;
+	int poCnt = 0;
+	int indCnt = 0;
+	for (unsigned int i = 0; i < NumMesh; i++) {
+		FbxMeshNode& m = Mesh[i];
+		memcpy(&singleMesh->vertices[verSizeCnt], m.vertices, m.NumVertices * 3 * sizeof(double));
+		memcpy(&singleMesh->PolygonSize[poCnt], m.PolygonSize, m.NumPolygon * sizeof(unsigned int));
+		for (unsigned int i1 = 0; i1 < m.NumPolygonVertices; i1++) {
+			singleMesh->polygonVertices[indCnt + i1] = m.polygonVertices[i1] + verCnt;
+		}
+		verSizeCnt += m.NumVertices * 3;
+		verCnt += m.NumVertices;
+		poCnt += m.NumPolygon;
+		indCnt += m.NumPolygonVertices;
+	}
+
+	singleMesh->Material[0] = new LayerElement();
+	LayerElement& mat = *(singleMesh->Material[0]);
+	int ln = (int)strlen("ByPolygon");
+	mat.MappingInformationType = new char[ln + 1];
+	strcpy(mat.MappingInformationType, "ByPolygon");
+	mat.MappingInformationType[ln] = '\0';
+	mat.Nummaterialarr = singleMesh->NumPolygon;
+	mat.materials = new int[mat.Nummaterialarr];
+	int PolygonCnt = 0;
+	int materialCnt = 0;
+	for (unsigned int i = 0; i < NumMesh; i++) {
+		FbxMeshNode& m = Mesh[i];
+		if (!strcmp(m.Material[0]->MappingInformationType, "AllSame")) {
+			//AllSameの場合materials配列は1個
+			for (unsigned int i1 = 0; i1 < m.NumPolygon; i1++) {
+				mat.materials[PolygonCnt + i1] = m.Material[0]->materials[0] + materialCnt;
+			}
+		}
+		else {
+			for (unsigned int i1 = 0; i1 < m.NumPolygon; i1++) {
+				mat.materials[PolygonCnt + i1] = m.Material[0]->materials[i1] + materialCnt;
+			}
+		}
+		PolygonCnt += m.NumPolygon;
+		materialCnt += m.NumMaterial;
+	}
+
+	for (int i = 0; i < singleMesh->NumNormalsObj; i++) {
+		singleMesh->Normals[i] = new LayerElement();
+		LayerElement& nor = *(singleMesh->Normals[i]);
+		for (unsigned int i1 = 0; i1 < NumMesh; i1++) {
+			nor.Numnormals += Mesh[i1].Normals[i]->Numnormals;
+		}
+		nor.normals = new double[nor.Numnormals];
+		int norCnt = 0;
+		for (unsigned int i1 = 0; i1 < NumMesh; i1++) {
+			memcpy(&nor.normals[norCnt], Mesh[i1].Normals[i]->normals,
+				Mesh[i1].Normals[i]->Numnormals * sizeof(double));
+			norCnt += Mesh[i1].Normals[i]->Numnormals;
+		}
+	}
+
+	singleMesh->UV = new LayerElement * [singleMesh->NumUVObj];
+	for (int i = 0; i < singleMesh->NumUVObj; i++) {
+		singleMesh->UV[i] = new LayerElement();
+		LayerElement& uv = *(singleMesh->UV[i]);
+		for (unsigned int i1 = 0; i1 < NumMesh; i1++) {
+			uv.NumUV += Mesh[i1].UV[i]->NumUV;
+			uv.NumUVindex += Mesh[i1].UV[i]->NumUVindex;
+		}
+		int ln = (int)strlen(Mesh[0].UV[i]->name);
+		uv.name = new char[ln + 1];
+		strcpy(uv.name, Mesh[0].UV[i]->name);
+		uv.name[ln] = '\0';
+		uv.UV = new double[uv.NumUV];
+		uv.UVindex = new int[uv.NumUVindex];
+		uv.AlignedUV = new double[uv.NumUVindex * 2];
+
+		int uvCnt = 0;
+		int uvIndCnt = 0;
+		int aUvCnt = 0;
+		for (unsigned int i1 = 0; i1 < NumMesh; i1++) {
+			LayerElement& u = *(Mesh[i1].UV[i]);
+			memcpy(&uv.UV[uvCnt], u.UV, u.NumUV * sizeof(double));
+			for (unsigned int i2 = 0; i2 < u.NumUVindex; i2++) {
+				uv.UVindex[uvIndCnt + i2] = u.UVindex[i2] + uvCnt;
+			}
+			memcpy(&uv.AlignedUV[aUvCnt], u.AlignedUV, u.NumUVindex * 2 * sizeof(double));
+			uvCnt += u.NumUV;
+			uvIndCnt += u.NumUVindex;
+			aUvCnt += u.NumUVindex * 2;
+		}
+	}
+
+	singleMesh->material = new FbxMaterialNode * [singleMesh->NumMaterial];
+	int sinMatCnt = 0;
+	for (unsigned int i = 0; i < NumMesh; i++) {
+		for (int i1 = 0; i1 < Mesh[i].NumMaterial; i1++) {
+			singleMesh->material[sinMatCnt] = Mesh[i].material[i1];
+			Mesh[i].material[i1] = nullptr;
+			sinMatCnt++;
+		}
+	}
+
+	//Deformer合成
+	if (Mesh[0].NumDeformer > 0) {
+		singleMesh->NumDeformer = Mesh[0].NumDeformer;
+		unsigned int numDeformer = Mesh[0].NumDeformer;
+		int* IndicesCount = nullptr;//ボーンに影響を受ける頂点インデックス数
+		int** Indices = nullptr;//ボーンに影響を受ける頂点のインデックス配列
+		double** Weights = nullptr;//ボーンに影響を受ける頂点のウエイト配列
+		IndicesCount = new int[numDeformer];
+		Indices = new int* [numDeformer];
+		Weights = new double* [numDeformer];
+		for (unsigned int i = 0; i < numDeformer; i++) {
+			IndicesCount[i] = 0;
+			for (unsigned int i1 = 0; i1 < NumMesh; i1++) {
+				IndicesCount[i] += Mesh[i1].deformer[i]->IndicesCount;
+			}
+			Indices[i] = new int[IndicesCount[i]];
+			Weights[i] = new double[IndicesCount[i]];
+			int iCnt = 0;
+			int vCnt = 0;
+			for (unsigned int i1 = 0; i1 < NumMesh; i1++) {
+				Deformer& de = *(Mesh[i1].deformer[i]);
+				for (int i2 = 0; i2 < de.IndicesCount; i2++) {
+					Indices[i][i2 + iCnt] = de.Indices[i2] + vCnt;
+				}
+				memcpy(&Weights[i][iCnt], de.Weights, de.IndicesCount * sizeof(double));
+				iCnt += de.IndicesCount;
+				vCnt += Mesh[i1].NumVertices;
+			}
+		}
+
+		//ポインタをコピー
+		singleMesh->deformer = Mesh[0].deformer;
+		Mesh[0].deformer = nullptr;
+		singleMesh->rootDeformer = Mesh[0].rootDeformer;
+		Mesh[0].rootDeformer = nullptr;
+
+		//合成したボーン情報をコピー
+		for (unsigned int i = 0; i < numDeformer; i++) {
+			Deformer& de = *(singleMesh->deformer[i]);
+			de.IndicesCount = IndicesCount[i];
+			aDELETE(de.Indices);
+			aDELETE(de.Weights);
+			de.Indices = new int[IndicesCount[i]];
+			de.Weights = new double[IndicesCount[i]];
+			memcpy(de.Indices, Indices[i], IndicesCount[i] * sizeof(int));
+			memcpy(de.Weights, Weights[i], IndicesCount[i] * sizeof(double));
+		}
+
+		for (unsigned int i = 0; i < numDeformer; i++) {
+			aDELETE(Indices[i]);
+			aDELETE(Weights[i]);
+		}
+		aDELETE(Indices);
+		aDELETE(Weights);
+		aDELETE(IndicesCount);
+	}
+	singleMesh->lcl = Mesh[0].lcl;
+	aDELETE(Mesh);
+	NumMesh = 1;
 }

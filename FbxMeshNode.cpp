@@ -6,6 +6,7 @@
 
 #include "FbxMeshNode.h"
 #include <math.h>
+#include <string.h>
 
 double AnimationCurve::getKeyValue(int64_t time) {
 	unsigned int ind = 0;
@@ -223,12 +224,19 @@ FbxMeshNode::~FbxMeshNode() {
 	aDELETE(polygonVertices);
 	aDELETE(PolygonSize);
 	for (int i = 0; i < NumLayerElement; i++) {
-		sDELETE(material[i]);
 		sDELETE(Material[i]);
 		sDELETE(Normals[i]);
-		sDELETE(UV[i]);
 	}
-	for (unsigned int i = 0; i < NumDeformer; i++)sDELETE(deformer[i]);
+	for (int i = 0; i < NumUVObj; i++)sDELETE(UV[i]);
+	aDELETE(UV);
+	if (material) {
+		for (int i = 0; i < NumMaterial; i++)sDELETE(material[i]);
+		aDELETE(material);
+	}
+	if (deformer) {
+		for (unsigned int i = 0; i < NumDeformer; i++)sDELETE(deformer[i]);
+		aDELETE(deformer);
+	}
 	sDELETE(rootDeformer);
 }
 
@@ -332,7 +340,9 @@ char* FbxMeshNode::getMaterialReferenceInformationType(unsigned int layerIndex) 
 
 int FbxMeshNode::getMaterialNoOfPolygon(unsigned int polygonNo, unsigned int layerIndex) {
 	if (!Material[layerIndex])return -1;
-	if (Material[layerIndex]->Nummaterialarr <= polygonNo)return 0;
+	if (!strcmp(Material[layerIndex]->MappingInformationType, "AllSame")) {
+		return Material[layerIndex]->materials[0];
+	}
 	return Material[layerIndex]->materials[polygonNo];
 }
 
