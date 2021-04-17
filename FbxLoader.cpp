@@ -1512,44 +1512,63 @@ void FbxLoader::createFbxSingleMeshNode() {
 		for (unsigned int i1 = 0; i1 < NumMesh; i1++) {
 			nor.Numnormals += Mesh[i1].Normals[i]->Numnormals;
 		}
-		nor.normals = new double[nor.Numnormals];
-		int norCnt = 0;
-		for (unsigned int i1 = 0; i1 < NumMesh; i1++) {
-			memcpy(&nor.normals[norCnt], Mesh[i1].Normals[i]->normals,
-				Mesh[i1].Normals[i]->Numnormals * sizeof(double));
-			norCnt += Mesh[i1].Normals[i]->Numnormals;
+		if (nor.Numnormals > 0) {
+			nor.normals = new double[nor.Numnormals];
+			int norCnt = 0;
+			for (unsigned int i1 = 0; i1 < NumMesh; i1++) {
+				memcpy(&nor.normals[norCnt], Mesh[i1].Normals[i]->normals,
+					Mesh[i1].Normals[i]->Numnormals * sizeof(double));
+				norCnt += Mesh[i1].Normals[i]->Numnormals;
+			}
 		}
 	}
 
-	singleMesh->UV = new LayerElement * [singleMesh->NumUVObj];
-	for (int i = 0; i < singleMesh->NumUVObj; i++) {
-		singleMesh->UV[i] = new LayerElement();
-		LayerElement& uv = *(singleMesh->UV[i]);
-		for (unsigned int i1 = 0; i1 < NumMesh; i1++) {
-			uv.NumUV += Mesh[i1].UV[i]->NumUV;
-			uv.NumUVindex += Mesh[i1].UV[i]->NumUVindex;
-		}
-		int ln = (int)strlen(Mesh[0].UV[i]->name);
-		uv.name = new char[ln + 1];
-		strcpy(uv.name, Mesh[0].UV[i]->name);
-		uv.name[ln] = '\0';
-		uv.UV = new double[uv.NumUV];
-		uv.UVindex = new int[uv.NumUVindex];
-		uv.AlignedUV = new double[uv.NumUVindex * 2];
-
-		int uvCnt = 0;
-		int uvIndCnt = 0;
-		int aUvCnt = 0;
-		for (unsigned int i1 = 0; i1 < NumMesh; i1++) {
-			LayerElement& u = *(Mesh[i1].UV[i]);
-			memcpy(&uv.UV[uvCnt], u.UV, u.NumUV * sizeof(double));
-			for (unsigned int i2 = 0; i2 < u.NumUVindex; i2++) {
-				uv.UVindex[uvIndCnt + i2] = u.UVindex[i2] + uvCnt;
+	if (singleMesh->NumUVObj > 0) {
+		singleMesh->UV = new LayerElement * [singleMesh->NumUVObj];
+		for (int i = 0; i < singleMesh->NumUVObj; i++) {
+			singleMesh->UV[i] = new LayerElement();
+			LayerElement& uv = *(singleMesh->UV[i]);
+			for (unsigned int i1 = 0; i1 < NumMesh; i1++) {
+				uv.NumUV += Mesh[i1].UV[i]->NumUV;
+				uv.NumUVindex += Mesh[i1].UV[i]->NumUVindex;
 			}
-			memcpy(&uv.AlignedUV[aUvCnt], u.AlignedUV, u.NumUVindex * 2 * sizeof(double));
-			uvCnt += u.NumUV;
-			uvIndCnt += u.NumUVindex;
-			aUvCnt += u.NumUVindex * 2;
+			if (Mesh[0].UV[i]->name) {
+				int ln = (int)strlen(Mesh[0].UV[i]->name);
+				uv.name = new char[ln + 1];
+				strcpy(uv.name, Mesh[0].UV[i]->name);
+				uv.name[ln] = '\0';
+			}
+			if (uv.NumUV > 0) {
+				uv.UV = new double[uv.NumUV];
+			}
+			if (uv.NumUVindex > 0) {
+				uv.UVindex = new int[uv.NumUVindex];
+				uv.AlignedUV = new double[uv.NumUVindex * 2];
+			}
+			else {
+				uv.AlignedUV = new double[uv.NumUV];
+			}
+			int uvCnt = 0;
+			int uvIndCnt = 0;
+			int aUvCnt = 0;
+			for (unsigned int i1 = 0; i1 < NumMesh; i1++) {
+				LayerElement& u = *(Mesh[i1].UV[i]);
+				if (u.NumUV > 0) {
+					memcpy(&uv.UV[uvCnt], u.UV, u.NumUV * sizeof(double));
+				}
+				if (uv.NumUVindex > 0) {
+					for (unsigned int i2 = 0; i2 < u.NumUVindex; i2++) {
+						uv.UVindex[uvIndCnt + i2] = u.UVindex[i2] + uvCnt;
+					}
+					memcpy(&uv.AlignedUV[aUvCnt], u.AlignedUV, u.NumUVindex * 2 * sizeof(double));
+				}
+				else {
+					memcpy(&uv.AlignedUV[uvCnt], u.AlignedUV, u.NumUV * sizeof(double));
+				}
+				uvCnt += u.NumUV;
+				uvIndCnt += u.NumUVindex;
+				aUvCnt += u.NumUVindex * 2;
+			}
 		}
 	}
 

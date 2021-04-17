@@ -227,8 +227,10 @@ FbxMeshNode::~FbxMeshNode() {
 		sDELETE(Material[i]);
 		sDELETE(Normals[i]);
 	}
-	for (int i = 0; i < NumUVObj; i++)sDELETE(UV[i]);
-	aDELETE(UV);
+	if (UV) {
+		for (int i = 0; i < NumUVObj; i++)sDELETE(UV[i]);
+		aDELETE(UV);
+	}
 	if (material) {
 		for (int i = 0; i < NumMaterial; i++)sDELETE(material[i]);
 		aDELETE(material);
