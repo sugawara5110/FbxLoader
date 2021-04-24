@@ -1448,11 +1448,12 @@ void FbxLoader::drawNode() {
 
 void FbxLoader::createFbxSingleMeshNode() {
 	singleMesh = new FbxMeshNode();
+	int maxNumMaterial = 0;
 	for (unsigned int i = 0; i < NumMesh; i++) {
 		singleMesh->NumVertices += Mesh[i].NumVertices;
 		singleMesh->NumPolygonVertices += Mesh[i].NumPolygonVertices;
 		singleMesh->NumPolygon += Mesh[i].NumPolygon;
-		singleMesh->NumMaterial += Mesh[i].NumMaterial;
+		maxNumMaterial += Mesh[i].NumMaterial;
 	}
 	singleMesh->NumNormalsObj = Mesh[0].NumNormalsObj;
 	singleMesh->NumUVObj = Mesh[0].NumUVObj;
@@ -1479,33 +1480,96 @@ void FbxLoader::createFbxSingleMeshNode() {
 		indCnt += m.NumPolygonVertices;
 	}
 
+	//materialNameList生成
+	int matNameCnt = 0;
+	char** matNameList = new char* [maxNumMaterial];
+	FbxMaterialNode** matPList = new FbxMaterialNode * [maxNumMaterial];
+	for (int i = 0; i < maxNumMaterial; i++)matNameList[i] = nullptr;
+	for (unsigned int i = 0; i < NumMesh; i++) {
+		FbxMeshNode& mesh = Mesh[i];
+		for (int i1 = 0; i1 < mesh.NumMaterial; i1++) {
+			FbxMaterialNode& material = *(mesh.material[i1]);
+			bool hit = false;
+			//Listに名前があるか検索
+			for (int i2 = 0; i2 < matNameCnt; i2++) {
+				if (!material.MaterialName) {
+					hit = true;
+					break;
+				}
+				if (!strcmp(matNameList[i2], material.MaterialName)) {
+					hit = true;
+					break;
+				}
+			}
+			if (!hit) {
+				int ln = (int)strlen(material.MaterialName) + 1;
+				matNameList[matNameCnt] = new char[ln];
+				strcpy(matNameList[matNameCnt], material.MaterialName);
+				matPList[matNameCnt] = mesh.material[i1];
+				matNameCnt++;
+			}
+		}
+	}
+	//マテリアルポインタ配列コピー
+	singleMesh->NumMaterial = matNameCnt;
+	singleMesh->material = new FbxMaterialNode * [singleMesh->NumMaterial];
+	memcpy(singleMesh->material, matPList, sizeof(FbxMaterialNode*) * singleMesh->NumMaterial);
+	aDELETE(matPList);
+
+	//ポリゴン毎のマテリアル番号
 	singleMesh->Material[0] = new LayerElement();
-	LayerElement& mat = *(singleMesh->Material[0]);
+	LayerElement& smat = *(singleMesh->Material[0]);
 	int ln = (int)strlen("ByPolygon");
-	mat.MappingInformationType = new char[ln + 1];
-	strcpy(mat.MappingInformationType, "ByPolygon");
-	mat.MappingInformationType[ln] = '\0';
-	mat.Nummaterialarr = singleMesh->NumPolygon;
-	mat.materials = new int[mat.Nummaterialarr];
+	smat.MappingInformationType = new char[ln + 1];
+	strcpy(smat.MappingInformationType, "ByPolygon");
+	smat.MappingInformationType[ln] = '\0';
+	smat.Nummaterialarr = singleMesh->NumPolygon;
+	smat.materials = new int[smat.Nummaterialarr];
 	int PolygonCnt = 0;
-	int materialCnt = 0;
 	for (unsigned int i = 0; i < NumMesh; i++) {
 		FbxMeshNode& m = Mesh[i];
-		if (!strcmp(m.Material[0]->MappingInformationType, "AllSame")) {
-			//AllSameの場合materials配列は1個
-			for (unsigned int i1 = 0; i1 < m.NumPolygon; i1++) {
-				mat.materials[PolygonCnt + i1] = m.Material[0]->materials[0] + materialCnt;
+		bool allSame = false;
+		if (!strcmp(m.Material[0]->MappingInformationType, "AllSame"))allSame = true;
+		//AllSameの場合materials配列は1個
+		for (unsigned int i1 = 0; i1 < m.NumPolygon; i1++) {
+			int materialsIndex = i1;
+			if (allSame)materialsIndex = 0;
+			int mNo = m.Material[0]->materials[materialsIndex];
+			char* mName = m.material[mNo]->MaterialName;
+			int smNo = 0;
+			for (int i2 = 0; i2 < matNameCnt; i2++) {
+				if (!strcmp(matNameList[i2], mName)) {
+					smNo = i2;
+					break;
+				}
 			}
-		}
-		else {
-			for (unsigned int i1 = 0; i1 < m.NumPolygon; i1++) {
-				mat.materials[PolygonCnt + i1] = m.Material[0]->materials[i1] + materialCnt;
-			}
+			smat.materials[PolygonCnt + i1] = smNo;
 		}
 		PolygonCnt += m.NumPolygon;
-		materialCnt += m.NumMaterial;
 	}
 
+	for (unsigned int i = 0; i < NumMesh; i++) {
+		FbxMeshNode& mesh = Mesh[i];
+		for (int i1 = 0; i1 < mesh.NumMaterial; i1++) {
+			bool hit = false;
+			for (int i2 = 0; i2 < singleMesh->NumMaterial; i2++) {
+				//singleMesh内に含まれるmaterialを検索
+				if (singleMesh->material[i2] == mesh.material[i1]) {
+					hit = true;
+					break;
+				}
+			}
+			if (hit) {
+				//含まれるmaterialはsingleMeshから解放されるので
+				//ポインタにNULLを設定しておく(解放時エラー対策)
+				mesh.material[i1] = nullptr;
+			}
+		}
+	}
+	for (int i = 0; i < maxNumMaterial; i++)aDELETE(matNameList[i]);
+	aDELETE(matNameList);
+
+	//法線
 	for (int i = 0; i < singleMesh->NumNormalsObj; i++) {
 		singleMesh->Normals[i] = new LayerElement();
 		LayerElement& nor = *(singleMesh->Normals[i]);
@@ -1523,6 +1587,7 @@ void FbxLoader::createFbxSingleMeshNode() {
 		}
 	}
 
+	//UV
 	if (singleMesh->NumUVObj > 0) {
 		singleMesh->UV = new LayerElement * [singleMesh->NumUVObj];
 		for (int i = 0; i < singleMesh->NumUVObj; i++) {
@@ -1569,16 +1634,6 @@ void FbxLoader::createFbxSingleMeshNode() {
 				uvIndCnt += u.NumUVindex;
 				aUvCnt += u.NumUVindex * 2;
 			}
-		}
-	}
-
-	singleMesh->material = new FbxMaterialNode * [singleMesh->NumMaterial];
-	int sinMatCnt = 0;
-	for (unsigned int i = 0; i < NumMesh; i++) {
-		for (int i1 = 0; i1 < Mesh[i].NumMaterial; i1++) {
-			singleMesh->material[sinMatCnt] = Mesh[i].material[i1];
-			Mesh[i].material[i1] = nullptr;
-			sinMatCnt++;
 		}
 	}
 

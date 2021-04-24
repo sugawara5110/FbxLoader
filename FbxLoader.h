@@ -138,7 +138,7 @@ private:
 	FbxMeshNode* Mesh = nullptr;
 	FbxMeshNode* singleMesh = nullptr;
 	unsigned int NumDeformer = 0;
-	Deformer** deformer = { nullptr };//デフォーマーのみのファイル対応
+	Deformer** deformer = nullptr;//デフォーマーのみのファイル対応
 	Deformer* rootDeformer = nullptr;
 	int numAnimation = 0;
 	GlobalSettings Gset = {};

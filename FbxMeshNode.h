@@ -201,14 +201,14 @@ private:
 	unsigned int* PolygonSize = nullptr;//各ポリゴン頂点インデックス数
 	const static int NumLayerElement = 10;
 	int NumMaterial = 0;//マテリアル数
-	FbxMaterialNode** material = { nullptr };
+	FbxMaterialNode** material = nullptr;
 	LayerElement* Material[NumLayerElement] = { nullptr };//ポリゴン毎の使用マテリアル番号配列
 	int NumNormalsObj = 0;
 	LayerElement* Normals[NumLayerElement] = { nullptr };
 	int NumUVObj = 0;
-	LayerElement** UV = { nullptr };
+	LayerElement** UV = nullptr;
 	unsigned int NumDeformer = 0;
-	Deformer** deformer = { nullptr };
+	Deformer** deformer = nullptr;
 	Deformer* rootDeformer = nullptr;
 	Lcl lcl = {};
 
