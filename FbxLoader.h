@@ -163,6 +163,9 @@ private:
 	bool checkMeshNodeRecord(NodeRecord* node);
 	void getGeometryCounter(NodeRecord* node, FbxMeshNode* mesh);
 	void getMaterialCounter(NodeRecord* node, FbxMeshNode* mesh);
+	void meshCount(NodeRecord* n, unsigned int& numMesh);
+	void geometryCount(NodeRecord* n, FbxMeshNode* meshArr, unsigned int& meshCounter);
+	void searchGeometry(NodeRecord* n, FbxMeshNode* meshArr, unsigned int& meshCounter, unsigned int& materialCounter);
 	void getMesh();
 	void setParentPointerOfNoneMeshSubDeformer();
 	void getNoneMeshSubDeformerCounter(NodeRecord* node);

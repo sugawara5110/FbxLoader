@@ -937,61 +937,77 @@ void FbxLoader::getMaterialCounter(NodeRecord* node, FbxMeshNode* mesh) {
 	}
 }
 
-void FbxLoader::getMesh() {
-	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
-		NodeRecord* n1 = rootNode->connectionNode[i];
-		if (!strcmp(n1->className, "Model") &&
-			!strcmp(n1->nodeName[1], "Mesh")) {
-			if (checkMeshNodeRecord(n1))NumMesh++;
-		}
-		if (!strcmp(n1->className, "Model") &&
-			!strcmp(n1->nodeName[1], "Null")) {//NullÇÃâ∫Ç…MeshÇ™Ç†ÇÈèÍçáÇ‡Ç†ÇÈ
-			for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
-				NodeRecord* n2 = n1->connectionNode[i1];
-				if (!strcmp(n2->className, "Model") &&
-					!strcmp(n2->nodeName[1], "Mesh")) {
-					if (checkMeshNodeRecord(n2))NumMesh++;
-				}
+void FbxLoader::meshCount(NodeRecord* n, unsigned int& numMesh) {
+	for (unsigned int i = 0; i < n->connectionNode.size(); i++) {
+		NodeRecord* n1 = n->connectionNode[i];
+		if (!strcmp(n1->className, "Model")) {
+			if (!strcmp(n1->nodeName[1], "Mesh")) {
+				if (checkMeshNodeRecord(n1))numMesh++;
+			}
+			else {
+				meshCount(n1, numMesh);
 			}
 		}
 	}
+}
+
+void FbxLoader::geometryCount(NodeRecord* n, FbxMeshNode* meshArr, unsigned int& meshCounter) {
+	for (unsigned int i = 0; i < n->connectionNode.size(); i++) {
+		NodeRecord* n1 = n->connectionNode[i];
+		if (!strcmp(n1->className, "Model")) {
+			if (!strcmp(n1->nodeName[1], "Mesh")) {
+				if (checkMeshNodeRecord(n1)) {
+					FbxMeshNode& mesh = meshArr[meshCounter];
+					getLcl(n1, mesh.lcl);
+					for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
+						NodeRecord* n2 = n1->connectionNode[i1];
+						getGeometryCounter(n2, &mesh);
+						getMaterialCounter(n2, &mesh);
+					}
+					meshCounter++;
+				}
+			}
+			else {
+				geometryCount(n1, meshArr, meshCounter);
+			}
+		}
+	}
+}
+
+void FbxLoader::searchGeometry(NodeRecord* n, FbxMeshNode* meshArr, unsigned int& meshCounter, unsigned int& materialCounter) {
+	for (unsigned int i = 0; i < n->connectionNode.size(); i++) {
+		NodeRecord* n1 = n->connectionNode[i];
+		if (!strcmp(n1->className, "Model")) {
+			if (!strcmp(n1->nodeName[1], "Mesh")) {
+				if (checkMeshNodeRecord(n1)) {
+					FbxMeshNode& mesh = meshArr[meshCounter];
+					getLcl(n1, mesh.lcl);
+					for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
+						NodeRecord* n2 = n1->connectionNode[i1];
+						getGeometry(n2, &mesh);
+						getMaterial(n2, &mesh, &materialCounter);
+					}
+					meshCounter++;
+					materialCounter = 0;
+				}
+			}
+			else {
+				searchGeometry(n1, meshArr, meshCounter, materialCounter);
+			}
+		}
+	}
+}
+
+void FbxLoader::getMesh() {
+
+	meshCount(rootNode, NumMesh);
+
 	if (NumMesh <= 0)return;
 	Mesh = new FbxMeshNode[NumMesh];
 
 	unsigned int mecnt = 0;
-	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
-		NodeRecord* n1 = rootNode->connectionNode[i];
-		if (!strcmp(n1->className, "Model") &&
-			!strcmp(n1->nodeName[1], "Mesh")) {
-			if (checkMeshNodeRecord(n1)) {
-				getLcl(n1, Mesh[mecnt].lcl);
-				for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
-					NodeRecord* n2 = n1->connectionNode[i1];
-					getGeometryCounter(n2, &Mesh[mecnt]);
-					getMaterialCounter(n2, &Mesh[mecnt]);
-				}
-				mecnt++;
-			}
-		}
-		if (!strcmp(n1->className, "Model") &&
-			!strcmp(n1->nodeName[1], "Null")) {
-			for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
-				NodeRecord* n2 = n1->connectionNode[i1];
-				if (!strcmp(n2->className, "Model") &&
-					!strcmp(n2->nodeName[1], "Mesh")) {
-					if (checkMeshNodeRecord(n2)) {
-						getLcl(n2, Mesh[mecnt].lcl);
-						for (unsigned int i2 = 0; i2 < n2->connectionNode.size(); i2++) {
-							NodeRecord* n3 = n2->connectionNode[i2];
-							getGeometryCounter(n3, &Mesh[mecnt]);
-							getMaterialCounter(n3, &Mesh[mecnt]);
-						}
-						mecnt++;
-					}
-				}
-			}
-		}
-	}
+
+	geometryCount(rootNode, Mesh, mecnt);
 
 	for (unsigned int i = 0; i < NumMesh; i++) {
 		Mesh[i].material = new FbxMaterialNode * [Mesh[i].NumMaterial];
@@ -1002,41 +1018,8 @@ void FbxLoader::getMesh() {
 
 	mecnt = 0;
 	unsigned int matcnt = 0;
-	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
-		NodeRecord* n1 = rootNode->connectionNode[i];
-		if (!strcmp(n1->className, "Model") &&
-			!strcmp(n1->nodeName[1], "Mesh")) {
-			if (checkMeshNodeRecord(n1)) {
-				getLcl(n1, Mesh[mecnt].lcl);
-				for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
-					NodeRecord* n2 = n1->connectionNode[i1];
-					getGeometry(n2, &Mesh[mecnt]);
-					getMaterial(n2, &Mesh[mecnt], &matcnt);
-				}
-				mecnt++;
-				matcnt = 0;
-			}
-		}
-		if (!strcmp(n1->className, "Model") &&
-			!strcmp(n1->nodeName[1], "Null")) {
-			for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
-				NodeRecord* n2 = n1->connectionNode[i1];
-				if (!strcmp(n2->className, "Model") &&
-					!strcmp(n2->nodeName[1], "Mesh")) {
-					if (checkMeshNodeRecord(n2)) {
-						getLcl(n2, Mesh[mecnt].lcl);
-						for (unsigned int i2 = 0; i2 < n2->connectionNode.size(); i2++) {
-							NodeRecord* n3 = n2->connectionNode[i2];
-							getGeometry(n3, &Mesh[mecnt]);
-							getMaterial(n3, &Mesh[mecnt], &matcnt);
-						}
-						mecnt++;
-						matcnt = 0;
-					}
-				}
-			}
-		}
-	}
+
+	searchGeometry(rootNode, Mesh, mecnt, matcnt);
 
 	//rootBoneê∂ê¨, nameìoò^(ñ{óàDeformerÇ∂Ç·Ç»Ç¢ÇÃÇ≈ï Ç…ê∂ê¨)
 	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
