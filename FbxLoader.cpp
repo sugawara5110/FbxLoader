@@ -266,7 +266,7 @@ void NodeRecord::set(FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector
 		} while (EndOffset > childEndOffset && fp->convertBYTEtoUINT32or64() != 0);
 		//カウントが終わったので最初の子ノードのファイルポインタに戻す
 		fp->seekPointer(topChildPointer);
-		nodeChildren = new NodeRecord[NumChildren];
+		if (NumChildren > 0)nodeChildren = new NodeRecord[NumChildren];
 		for (unsigned int i = 0; i < NumChildren; i++) {
 			nodeChildren[i].set(fp, cn, cnLi);
 		}
@@ -998,38 +998,17 @@ void FbxLoader::searchGeometry(NodeRecord* n, FbxMeshNode* meshArr, unsigned int
 	}
 }
 
-void FbxLoader::getMesh() {
-
-	meshCount(rootNode, NumMesh);
-
-	if (NumMesh <= 0)return;
-	Mesh = new FbxMeshNode[NumMesh];
-
-	unsigned int mecnt = 0;
-
-	geometryCount(rootNode, Mesh, mecnt);
-
-	for (unsigned int i = 0; i < NumMesh; i++) {
-		Mesh[i].material = new FbxMaterialNode * [Mesh[i].NumMaterial];
-		Mesh[i].UV = new LayerElement * [Mesh[i].NumUVObj];
-		Mesh[i].deformer = new Deformer * [Mesh[i].NumDeformer];
-		Mesh[i].NumDeformer = 0;//この後にカウンターとして使うので0に初期化
-	}
-
-	mecnt = 0;
-	unsigned int matcnt = 0;
-
-	searchGeometry(rootNode, Mesh, mecnt, matcnt);
-
+void FbxLoader::createRootDeformer(NodeRecord* n, FbxMeshNode* meshArr) {
 	//rootBone生成, name登録(本来Deformerじゃないので別に生成)
-	for (unsigned int i = 0; i < rootNode->connectionNode.size(); i++) {
-		NodeRecord* n1 = rootNode->connectionNode[i];
+	for (unsigned int i = 0; i < n->connectionNode.size(); i++) {
+		NodeRecord* n1 = n->connectionNode[i];
 		if (!strcmp(n1->className, "Model") && n1->nodeName[1]) {
 			if (!strcmp(n1->nodeName[1], "Root") || !strcmp(n1->nodeName[1], "Limb") || !strcmp(n1->nodeName[1], "Null")) {
 				for (unsigned int j = 0; j < NumMesh; j++) {
-					if (Mesh[j].NumDeformer > 0) {
-						Mesh[j].rootDeformer = new Deformer();
-						Deformer* defo = Mesh[j].rootDeformer;
+					FbxMeshNode& mesh = meshArr[j];
+					if (mesh.NumDeformer > 0) {
+						mesh.rootDeformer = new Deformer();
+						Deformer* defo = mesh.rootDeformer;
 						getLcl(n1, defo->lcl);
 						int len = (int)strlen(n1->nodeName[0]);
 						defo->name = new char[len + 1];
@@ -1048,11 +1027,50 @@ void FbxLoader::getMesh() {
 				}
 				break;
 			}
+			else {
+				createRootDeformer(n1, meshArr);
+			}
 		}
 	}
+}
+
+void FbxLoader::getMesh() {
+
+	meshCount(rootNode, NumMesh);
+
+	if (NumMesh <= 0)return;
+	Mesh = new FbxMeshNode[NumMesh];
+
+	unsigned int mecnt = 0;
+
+	geometryCount(rootNode, Mesh, mecnt);
+
+	for (unsigned int i = 0; i < NumMesh; i++) {
+		Mesh[i].material = new FbxMaterialNode * [Mesh[i].NumMaterial];
+		if (Mesh[i].NumUVObj > 0)Mesh[i].UV = new LayerElement * [Mesh[i].NumUVObj];
+		Mesh[i].deformer = new Deformer * [Mesh[i].NumDeformer];
+		Mesh[i].NumDeformer = 0;//この後にカウンターとして使うので0に初期化
+	}
+
+	mecnt = 0;
+	unsigned int matcnt = 0;
+
+	searchGeometry(rootNode, Mesh, mecnt, matcnt);
+
+	createRootDeformer(rootNode, Mesh);
 
 	//UV整列
 	for (unsigned int i = 0; i < NumMesh; i++) {
+		if (Mesh[i].NumUVObj <= 0) {
+			Mesh[i].UV = new LayerElement * [1];
+			Mesh[i].NumUVObj = 1;
+			Mesh[i].UV[0] = new LayerElement();
+			Mesh[i].UV[0]->AlignedUV = new double[Mesh[i].NumPolygonVertices * 2];
+			for (unsigned int i2 = 0; i2 < Mesh[i].NumPolygonVertices * 2; i2++) {
+				Mesh[i].UV[0]->AlignedUV[i2] = 0.0;
+			}
+			continue;
+		}
 		for (int i1 = 0; i1 < Mesh[i].NumUVObj; i1++) {
 			LayerElement* uv = Mesh[i].UV[i1];
 			if (uv == nullptr)break;
