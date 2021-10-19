@@ -497,6 +497,16 @@ void FbxLoader::getLayerElementSub(NodeRecord* node, LayerElement* le) {
 			aDELETE(output);
 		}
 
+		if (!strcmp(n1->className, "NormalsIndex")) {
+			unsigned char* output = nullptr;
+			unsigned int outSize = 0;
+			Decompress(n1, &output, &outSize, sizeof(int));
+			le->NumNormalsIndex = outSize;
+			le->NormalsIndex = new int[outSize];
+			ConvertUCHARtoINT32(output, le->NormalsIndex, outSize);
+			aDELETE(output);
+		}
+
 		if (!strcmp(n1->className, "UV")) {
 			unsigned char* output = nullptr;
 			unsigned int outSize = 0;
@@ -609,10 +619,6 @@ void FbxLoader::getSubDeformer(NodeRecord* node, FbxMeshNode* mesh) {
 	if (!strcmp(node->className, "Deformer")) {
 		mesh->deformer[mesh->NumDeformer] = new Deformer();
 		Deformer* defo = mesh->deformer[mesh->NumDeformer];
-		//Deformer名
-		int len = (int)strlen(node->nodeName[0]);
-		defo->name = new char[len + 1];
-		strcpy(defo->name, node->nodeName[0]);
 
 		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
 			NodeRecord* n1 = node->connectionNode[i];
@@ -622,10 +628,14 @@ void FbxLoader::getSubDeformer(NodeRecord* node, FbxMeshNode* mesh) {
 			}
 		}
 
-		//子ノードName登録
+		//Name登録
 		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
 			NodeRecord* n1 = node->connectionNode[i];
 			if (!strcmp(n1->className, "Model")) {//自身のModel
+				//自身のName
+				int len = (int)strlen(n1->nodeName[0]);
+				defo->name = new char[len + 1];
+				strcpy(defo->name, n1->nodeName[0]);
 				for (unsigned int i1 = 0; i1 < n1->connectionNode.size(); i1++) {
 					NodeRecord* n2 = n1->connectionNode[i1];
 					if (!strcmp(n2->className, "Model")) {//子ノードのModel
@@ -1059,8 +1069,28 @@ void FbxLoader::getMesh() {
 
 	createRootDeformer(rootNode, Mesh);
 
-	//UV整列
 	for (unsigned int i = 0; i < NumMesh; i++) {
+		//Normals整列
+		for (int i1 = 0; i1 < Mesh[i].NumNormalsObj; i1++) {
+			LayerElement* nor = Mesh[i].Normals[i1];
+			if (nor == nullptr)continue;
+			if (nor->NumNormalsIndex > 0) {
+				nor->AlignedNormals = new double[nor->NumNormalsIndex * 3];
+				unsigned int cnt = 0;
+				for (unsigned int i2 = 0; i2 < nor->NumNormalsIndex; i2++) {
+					//NormalsIndexはNormalsの3値を一組としてのインデックスなので×3で計算
+					nor->AlignedNormals[cnt++] = nor->normals[nor->NormalsIndex[i2] * 3];
+					nor->AlignedNormals[cnt++] = nor->normals[nor->NormalsIndex[i2] * 3 + 1];
+					nor->AlignedNormals[cnt++] = nor->normals[nor->NormalsIndex[i2] * 3 + 2];
+				}
+			}
+			else {
+				nor->AlignedNormals = new double[nor->Numnormals];
+				memcpy(nor->AlignedNormals, nor->normals, nor->Numnormals * sizeof(double));
+			}
+		}
+
+		//UV整列
 		if (Mesh[i].NumUVObj <= 0) {
 			Mesh[i].UV = new LayerElement * [1];
 			Mesh[i].NumUVObj = 1;
@@ -1073,12 +1103,13 @@ void FbxLoader::getMesh() {
 		}
 		for (int i1 = 0; i1 < Mesh[i].NumUVObj; i1++) {
 			LayerElement* uv = Mesh[i].UV[i1];
-			if (uv == nullptr)break;
+			if (uv == nullptr)continue;
 			if (uv->NumUVindex > 0) {
 				uv->AlignedUV = new double[uv->NumUVindex * 2];
 				unsigned int cnt = 0;
 				for (unsigned int i2 = 0; i2 < uv->NumUVindex; i2++) {
-					uv->AlignedUV[cnt++] = uv->UV[uv->UVindex[i2] * 2];//UVindexはUVの2値を一組としてのインデックスなので×2で計算
+					//UVindexはUVの2値を一組としてのインデックスなので×2で計算
+					uv->AlignedUV[cnt++] = uv->UV[uv->UVindex[i2] * 2];
 					uv->AlignedUV[cnt++] = uv->UV[uv->UVindex[i2] * 2 + 1];
 				}
 			}
@@ -1087,6 +1118,7 @@ void FbxLoader::getMesh() {
 				memcpy(uv->AlignedUV, uv->UV, uv->NumUV * sizeof(double));
 			}
 		}
+		//Deformer親ノード登録
 		setParentPointerOfSubDeformer(&Mesh[i]);
 	}
 }

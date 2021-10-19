@@ -11,7 +11,7 @@
 double AnimationCurve::getKeyValue(int64_t time) {
 	unsigned int ind = 0;
 	int64_t ti = time;
-	if (!KeyValueFloat)return 0.0;
+	if (!KeyValueFloat)return nullret;
 	if (NumKey <= 1)return (double)KeyValueFloat[0];
 	for (ind = 1; ind < NumKey; ind++) {
 		if (KeyTime[ind] > ti)break;//ti‚ªKeyTime[ind]–¢–ž, KeyTime[ind-1]ˆÈã
@@ -376,6 +376,21 @@ char* FbxMeshNode::getNormalReferenceInformationType(unsigned int layerIndex) {
 double* FbxMeshNode::getNormal(unsigned int layerIndex) {
 	if (!Normals[layerIndex])return nullptr;
 	return Normals[layerIndex]->normals;
+}
+
+unsigned int FbxMeshNode::getNumNormalIndex(unsigned int layerIndex) {
+	if (!Normals[layerIndex])return -1;
+	return Normals[layerIndex]->NumNormalsIndex;
+}
+
+int* FbxMeshNode::getNormalIndex(unsigned int layerIndex) {
+	if (!Normals[layerIndex])return nullptr;
+	return Normals[layerIndex]->NormalsIndex;
+}
+
+double* FbxMeshNode::getAlignedNormal(unsigned int layerIndex) {
+	if (!Normals[layerIndex])return nullptr;
+	return Normals[layerIndex]->AlignedNormals;
 }
 
 //UV

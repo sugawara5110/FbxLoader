@@ -34,10 +34,16 @@ private:
 	char* MappingInformationType = nullptr;
 	char* ReferenceInformationType = nullptr;
 	char* name = nullptr;
+
 	unsigned int Nummaterialarr = 0;
 	int* materials = nullptr;
+
 	unsigned int Numnormals = 0;
 	double* normals = nullptr;
+	unsigned int NumNormalsIndex = 0;
+	int* NormalsIndex = nullptr;
+	double* AlignedNormals = nullptr;
+
 	unsigned int NumUV = 0;
 	double* UV = nullptr;
 	unsigned int NumUVindex = 0;
@@ -48,8 +54,13 @@ private:
 		aDELETE(MappingInformationType);
 		aDELETE(ReferenceInformationType);
 		aDELETE(name);
+
 		aDELETE(materials);
+
 		aDELETE(normals);
+		aDELETE(NormalsIndex);
+		aDELETE(AlignedNormals);
+
 		aDELETE(UV);
 		aDELETE(UVindex);
 		aDELETE(AlignedUV);
@@ -66,6 +77,7 @@ private:
 	bool def = false;
 	int64_t* KeyTime = nullptr;
 	float* KeyValueFloat = nullptr;
+	double nullret = 0.0;
 
 	~AnimationCurve() {
 		aDELETE(KeyTime);
@@ -77,7 +89,7 @@ private:
 struct Lcl {
 	double Translation[3] = {};
 	double Rotation[3] = {};
-	double Scaling[3] = {};
+	double Scaling[3] = { 1.0,1.0,1.0 };
 };
 
 class Deformer {
@@ -122,6 +134,8 @@ public:
 		Translation = new AnimationCurve[numAnimation * 3];
 		Rotation = new AnimationCurve[numAnimation * 3];
 		Scaling = new AnimationCurve[numAnimation * 3];
+		for (int i = 0; i < numAnimation * 3; i++)
+			Scaling[i].nullret = 1.0;
 	}
 	~Deformer() {
 		aDELETE(Translation);
@@ -253,6 +267,9 @@ public:
 	char* getNormalMappingInformationType(unsigned int layerIndex = 0);
 	char* getNormalReferenceInformationType(unsigned int layerIndex = 0);
 	double* getNormal(unsigned int layerIndex = 0);
+	unsigned int getNumNormalIndex(unsigned int layerIndex = 0);
+	int* getNormalIndex(unsigned int layerIndex = 0);
+	double* getAlignedNormal(unsigned int layerIndex = 0);
 
 	//UV
 	int getNumUVObj();
