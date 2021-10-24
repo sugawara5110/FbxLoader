@@ -25,6 +25,14 @@ double AnimationCurve::getKeyValue(int64_t time) {
 	return (double)KeyValueFloat[ind - 1] + addVal;
 }
 
+void AnimationCurve::KeyValueFloatOffset(double offset) {
+	if (KeyValueFloat) {
+		for (unsigned int i = 0; i < NumKey; i++) {
+			KeyValueFloat[i] += (float)offset;
+		}
+	}
+}
+
 int Deformer::numAnimation = 0;
 
 void Deformer::MatrixScaling(double mat[16], double sx, double sy, double sz) {
@@ -192,6 +200,23 @@ void Deformer::EvaluateLocalTransform(int64_t time, int animationIndex) {
 	double scrot[16] = {};
 	MatrixMultiply(scrot, sca, rotxyz);
 	MatrixMultiply(LocalPose, scrot, mov);
+}
+
+void Deformer::rotationOffset() {
+	if (!lcl.RotationOffsetOn)return;
+	for (int i = 0; i < numWeights; i++) {
+		if (Weights[i] > 1.0)Weights[i] = 1.0;
+	}
+	double offset[3] = {};
+	for (int i = 0; i < 3; i++) {
+		offset[i] += lcl.RotationOffset[i] + parentNode->lcl.Translation[i];
+	}
+	for (int i = 0; i < numAnimation; i++) {
+		AnimationCurve* T = &Translation[i * 3];
+		T[0].KeyValueFloatOffset(offset[0]);
+		T[1].KeyValueFloatOffset(offset[1]);
+		T[2].KeyValueFloatOffset(offset[2]);
+	}
 }
 
 double* Deformer::SubEvaluateGlobalTransform(int64_t time, int animationIndex) {

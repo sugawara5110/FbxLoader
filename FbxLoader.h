@@ -184,6 +184,7 @@ private:
 	void getPropertiesInt(NodeRecord* pro70Child, int& pi, char* pName);
 	void getPropertiesint64(NodeRecord* pro70Child, int64_t& pi, char* pName);
 	void getPropertiesDouble(NodeRecord* pro70Child, double* piArr, int num, char* pName);
+	void checkProperties(NodeRecord* pro70Child, bool* check, char* pName);
 	void getLcl(NodeRecord* model, Lcl& lcl);
 
 public:

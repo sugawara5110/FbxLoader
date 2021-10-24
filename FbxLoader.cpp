@@ -666,6 +666,7 @@ void FbxLoader::getSubDeformer(NodeRecord* node, FbxMeshNode* mesh) {
 				unsigned char* output = nullptr;
 				unsigned int outSize = 0;
 				Decompress(n1, &output, &outSize, sizeof(double));
+				defo->numWeights = outSize;
 				defo->Weights = new double[outSize];
 				ConvertUCHARtoDouble(output, defo->Weights, outSize);
 				aDELETE(output);
@@ -864,6 +865,8 @@ void FbxLoader::getLcl(NodeRecord* model, Lcl& lcl) {
 		if (!strcmp(n1->className, "Properties70")) {
 			for (unsigned int i1 = 0; i1 < n1->NumChildren; i1++) {
 				NodeRecord* n2 = &n1->nodeChildren[i1];
+				checkProperties(n2, &lcl.RotationOffsetOn, "RotationOffset");
+				getPropertiesDouble(n2, lcl.RotationOffset, 3, "RotationOffset");
 				getPropertiesDouble(n2, lcl.Translation, 3, "Lcl Translation");
 				getPropertiesDouble(n2, lcl.Rotation, 3, "Lcl Rotation");
 				getPropertiesDouble(n2, lcl.Scaling, 3, "Lcl Scaling");
@@ -1120,6 +1123,9 @@ void FbxLoader::getMesh() {
 		}
 		//DeformerêeÉmÅ[Éhìoò^
 		setParentPointerOfSubDeformer(&Mesh[i]);
+		for (unsigned int i1 = 0; i1 < Mesh[i].NumDeformer; i1++) {
+			Mesh[i].deformer[i1]->rotationOffset();
+		}
 	}
 }
 
@@ -1273,6 +1279,13 @@ void FbxLoader::getPropertiesDouble(NodeRecord* pro70Child, double* piArr, int n
 			piArr[i] = convertUCHARtoDouble(&pro70Child->Property[proInd]);
 			proInd += 9;
 		}
+	}
+}
+
+void FbxLoader::checkProperties(NodeRecord* pro70Child, bool* check, char* pName) {
+	if (!strcmp(pro70Child->className, "P") &&
+		!strcmp(pro70Child->nodeName[0], pName)) {
+		*check = true;
 	}
 }
 

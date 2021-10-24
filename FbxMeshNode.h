@@ -83,10 +83,13 @@ private:
 		aDELETE(KeyTime);
 		aDELETE(KeyValueFloat);
 	}
+	void KeyValueFloatOffset(double offset);
 	double getKeyValue(int64_t time);
 };
 
 struct Lcl {
+	bool RotationOffsetOn = false;
+	double RotationOffset[3] = {};
 	double Translation[3] = {};
 	double Rotation[3] = {};
 	double Scaling[3] = { 1.0,1.0,1.0 };
@@ -105,6 +108,7 @@ private:
 
 	int IndicesCount = 0;//このボーンに影響を受ける頂点インデックス数
 	int* Indices = nullptr;//このボーンに影響を受ける頂点のインデックス配列
+	int numWeights = 0;
 	double* Weights = nullptr;//このボーンに影響を受ける頂点のウエイト配列
 	double TransformMatrix[16] = {};//中心位置
 	double TransformLinkMatrix[16] = {};//初期姿勢行列(絶対位置)
@@ -112,11 +116,12 @@ private:
 	double GlobalPose[16] = {};
 	static int numAnimation;
 
+	Lcl lcl = {};
+
 	AnimationCurve* Translation = nullptr;
 	AnimationCurve* Rotation = nullptr;
 	AnimationCurve* Scaling = nullptr;
-
-	Lcl lcl = {};
+	void rotationOffset();
 
 	void MatrixScaling(double mat[16], double sx, double sy, double sz);
 	void MatrixRotationX(double mat[16], double theta);
