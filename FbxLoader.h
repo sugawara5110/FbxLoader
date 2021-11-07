@@ -13,29 +13,7 @@
 
 #define NUMNODENAME 10
 
-class FilePointer {
-
-private:
-	unsigned int pointer = 0;
-	unsigned char* fileStr = nullptr;
-
-public:
-	~FilePointer();
-	bool versionSw = false;
-	bool setFile(char* pass);
-	void setCharArray(char* cArray, int size);//FILE使わないで読み込む時使用
-	unsigned int getPos();
-	void seekPointer(unsigned int ind);
-	unsigned char getByte();
-	void fRead(char* dst, int byteSize);
-	unsigned int convertBYTEtoUINT();
-	uint64_t convertBYTEtoUINT64();
-	unsigned int convertBYTEtoUINT32or64();
-	void backPointer4or8();
-};
-
 class FbxLoader;
-class FbxMeshNode;
 class NodeRecord;
 
 class ConnectionNo {
@@ -58,7 +36,26 @@ class NodeRecord {
 
 private:
 	friend FbxLoader;
-	friend FbxMeshNode;
+
+	class FilePointer {
+	private:
+		unsigned int pointer = 0;
+		unsigned char* fileStr = nullptr;
+	public:
+		~FilePointer();
+		bool versionSw = false;
+		bool setFile(char* pass);
+		void setCharArray(char* cArray, int size);//FILE使わないで読み込む時使用
+		unsigned int getPos();
+		void seekPointer(unsigned int ind);
+		unsigned char getByte();
+		void fRead(char* dst, int byteSize);
+		unsigned int convertBYTEtoUINT();
+		uint64_t convertBYTEtoUINT64();
+		unsigned int convertBYTEtoUINT32or64();
+		void backPointer4or8();
+	};
+
 	//全てリトルエンディアン
 	unsigned char classNameLen = 0;
 	char* className = nullptr;
@@ -128,7 +125,6 @@ struct GlobalSettings {
 class FbxLoader {
 
 private:
-	friend NodeRecord;
 	unsigned int version = 0;//23から26バイトまで4バイト分符号なし整数,リトルエンディアン(下から読む)
 	NodeRecord FbxRecord;//ファイルそのまま
 	NodeRecord* rootNode = nullptr;//ConnectionID:0のポインタ
@@ -143,9 +139,9 @@ private:
 	int numAnimation = 0;
 	GlobalSettings Gset = {};
 
-	bool fileCheck(FilePointer* fp);
-	void searchVersion(FilePointer* fp);
-	void readFBX(FilePointer* fp);
+	bool fileCheck(NodeRecord::FilePointer* fp);
+	void searchVersion(NodeRecord::FilePointer* fp);
+	void readFBX(NodeRecord::FilePointer* fp);
 	bool Decompress(NodeRecord* node, unsigned char** output, unsigned int* outSize, unsigned int typeSize);
 	void getLayerElementCounter(NodeRecord* node, FbxMeshNode* mesh);
 	void getLayerElementSub(NodeRecord* node, LayerElement* le);

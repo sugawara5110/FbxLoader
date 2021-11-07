@@ -10,14 +10,14 @@
 #include "../DecompressDeflate/DecompressDeflate.h"
 #define Kaydara_FBX_binary 18
 
-FilePointer::~FilePointer() {
+NodeRecord::FilePointer::~FilePointer() {
 	if (fileStr) {
 		delete[] fileStr;
 		fileStr = nullptr;
 	}
 }
 
-bool FilePointer::setFile(char* pass) {
+bool NodeRecord::FilePointer::setFile(char* pass) {
 	FILE* fp = fopen(pass, "rb");
 	if (fp == NULL) {
 		return false;
@@ -34,38 +34,38 @@ bool FilePointer::setFile(char* pass) {
 	return true;
 }
 
-void FilePointer::setCharArray(char *cArray, int size) {
+void NodeRecord::FilePointer::setCharArray(char* cArray, int size) {
 	fileStr = new unsigned char[size];
 	memcpy(fileStr, cArray, size * sizeof(unsigned char));
 }
 
-unsigned int FilePointer::getPos() {
+unsigned int NodeRecord::FilePointer::getPos() {
 	return pointer;
 }
 
-void FilePointer::seekPointer(unsigned int ind) {
+void NodeRecord::FilePointer::seekPointer(unsigned int ind) {
 	pointer = ind;
 }
 
-unsigned char FilePointer::getByte() {
+unsigned char NodeRecord::FilePointer::getByte() {
 	unsigned int ret = fileStr[pointer];
 	pointer++;
 	return ret;
 }
 
-void FilePointer::fRead(char *dst, int byteSize) {
+void NodeRecord::FilePointer::fRead(char* dst, int byteSize) {
 	memcpy(dst, &fileStr[pointer], byteSize * sizeof(unsigned char));
 	pointer += byteSize;
 }
 
-unsigned int FilePointer::convertBYTEtoUINT() {
+unsigned int NodeRecord::FilePointer::convertBYTEtoUINT() {
 	unsigned int ret = (fileStr[3 + pointer] << 24) | (fileStr[2 + pointer] << 16) |
 		(fileStr[1 + pointer] << 8) | (fileStr[0 + pointer]);
 	pointer += 4;
 	return ret;
 }
 
-uint64_t FilePointer::convertBYTEtoUINT64() {
+uint64_t NodeRecord::FilePointer::convertBYTEtoUINT64() {
 	uint64_t ret = ((uint64_t)fileStr[7 + pointer] << 56) | ((uint64_t)fileStr[6 + pointer] << 48) |
 		((uint64_t)fileStr[5 + pointer] << 40) | ((uint64_t)fileStr[4 + pointer] << 32) |
 		((uint64_t)fileStr[3 + pointer] << 24) | ((uint64_t)fileStr[2 + pointer] << 16) |
@@ -74,50 +74,52 @@ uint64_t FilePointer::convertBYTEtoUINT64() {
 	return ret;
 }
 
-unsigned int FilePointer::convertBYTEtoUINT32or64() {
+unsigned int NodeRecord::FilePointer::convertBYTEtoUINT32or64() {
 	if (versionSw)return (unsigned int)convertBYTEtoUINT64();
 	return convertBYTEtoUINT();
 }
 
-void FilePointer::backPointer4or8() {
+void NodeRecord::FilePointer::backPointer4or8() {
 	if (versionSw)
 		pointer -= 8;
 	else
 		pointer -= 4;
 }
 
-static unsigned int convertUCHARtoUINT(unsigned char* arr) {
-	return ((unsigned int)arr[3] << 24) | ((unsigned int)arr[2] << 16) |
-		((unsigned int)arr[1] << 8) | ((unsigned int)arr[0]);
-}
+namespace {
+	unsigned int convertUCHARtoUINT(unsigned char* arr) {
+		return ((unsigned int)arr[3] << 24) | ((unsigned int)arr[2] << 16) |
+			((unsigned int)arr[1] << 8) | ((unsigned int)arr[0]);
+	}
 
-static int convertUCHARtoINT32(unsigned char* arr) {
-	return ((int)arr[3] << 24) | ((int)arr[2] << 16) |
-		((int)arr[1] << 8) | ((int)arr[0]);
-}
+	int convertUCHARtoINT32(unsigned char* arr) {
+		return ((int)arr[3] << 24) | ((int)arr[2] << 16) |
+			((int)arr[1] << 8) | ((int)arr[0]);
+	}
 
-static int64_t convertUCHARtoint64(unsigned char* arr) {
-	return ((int64_t)arr[7] << 56) | ((int64_t)arr[6] << 48) |
-		((int64_t)arr[5] << 40) | ((int64_t)arr[4] << 32) |
-		((int64_t)arr[3] << 24) | ((int64_t)arr[2] << 16) |
-		((int64_t)arr[1] << 8) | ((int64_t)arr[0]);
-}
+	int64_t convertUCHARtoint64(unsigned char* arr) {
+		return ((int64_t)arr[7] << 56) | ((int64_t)arr[6] << 48) |
+			((int64_t)arr[5] << 40) | ((int64_t)arr[4] << 32) |
+			((int64_t)arr[3] << 24) | ((int64_t)arr[2] << 16) |
+			((int64_t)arr[1] << 8) | ((int64_t)arr[0]);
+	}
 
-static unsigned long long convertUCHARtoUINT64(unsigned char* arr) {
-	return ((unsigned long long)arr[7] << 56) | ((unsigned long long)arr[6] << 48) |
-		((unsigned long long)arr[5] << 40) | ((unsigned long long)arr[4] << 32) |
-		((unsigned long long)arr[3] << 24) | ((unsigned long long)arr[2] << 16) |
-		((unsigned long long)arr[1] << 8) | ((unsigned long long)arr[0]);
-}
+	unsigned long long convertUCHARtoUINT64(unsigned char* arr) {
+		return ((unsigned long long)arr[7] << 56) | ((unsigned long long)arr[6] << 48) |
+			((unsigned long long)arr[5] << 40) | ((unsigned long long)arr[4] << 32) |
+			((unsigned long long)arr[3] << 24) | ((unsigned long long)arr[2] << 16) |
+			((unsigned long long)arr[1] << 8) | ((unsigned long long)arr[0]);
+	}
 
-static double convertUCHARtoDouble(unsigned char* arr) {
-	unsigned long long tmp = ((unsigned long long)arr[7] << 56) | ((unsigned long long)arr[6] << 48) |
-		((unsigned long long)arr[5] << 40) | ((unsigned long long)arr[4] << 32) |
-		((unsigned long long)arr[3] << 24) | ((unsigned long long)arr[2] << 16) |
-		((unsigned long long)arr[1] << 8) | ((unsigned long long)arr[0]);
-	//byte列そのままで型変換する
-	double* dp = reinterpret_cast<double*>(&tmp);
-	return *dp;
+	double convertUCHARtoDouble(unsigned char* arr) {
+		unsigned long long tmp = ((unsigned long long)arr[7] << 56) | ((unsigned long long)arr[6] << 48) |
+			((unsigned long long)arr[5] << 40) | ((unsigned long long)arr[4] << 32) |
+			((unsigned long long)arr[3] << 24) | ((unsigned long long)arr[2] << 16) |
+			((unsigned long long)arr[1] << 8) | ((unsigned long long)arr[0]);
+		//byte列そのままで型変換する
+		double* dp = reinterpret_cast<double*>(&tmp);
+		return *dp;
+	}
 }
 
 void NodeRecord::searchName_Type(std::vector<ConnectionNo>& cn, uint64_t PropertyListLen) {
@@ -285,9 +287,9 @@ NodeRecord::~NodeRecord() {
 	aDELETE(nodeChildren);
 }
 
-bool FbxLoader::fileCheck(FilePointer *fp) {
+bool FbxLoader::fileCheck(NodeRecord::FilePointer* fp) {
 
-	char *str2 = "Kaydara FBX binary";
+	char* str2 = "Kaydara FBX binary";
 
 	int missCnt = 0;
 	for (int i = 0; i < Kaydara_FBX_binary + 1; i++) {
@@ -309,13 +311,13 @@ bool FbxLoader::fileCheck(FilePointer *fp) {
 	return true;
 }
 
-void FbxLoader::searchVersion(FilePointer* fp) {
+void FbxLoader::searchVersion(NodeRecord::FilePointer* fp) {
 	//バージョンは23-26バイトまで(4バイト分)リトルエンディアン(下の位から読んでいく)
 	version = fp->convertBYTEtoUINT();
 	if (version >= 7500)fp->versionSw = true;
 }
 
-void FbxLoader::readFBX(FilePointer* fp) {
+void FbxLoader::readFBX(NodeRecord::FilePointer* fp) {
 	unsigned int curpos = fp->getPos();
 
 	unsigned int nodeCount = 0;
@@ -1425,7 +1427,7 @@ FbxLoader::~FbxLoader() {
 }
 
 bool FbxLoader::setFbxFile(char* pass) {
-	FilePointer fp;
+	NodeRecord::FilePointer fp;
 	if (!fp.setFile(pass))return false;
 	if (!fileCheck(&fp))return false;
 	searchVersion(&fp);
@@ -1441,7 +1443,7 @@ bool FbxLoader::setFbxFile(char* pass) {
 }
 
 bool FbxLoader::setBinaryInFbxFile(char* strArray, int size) {
-	FilePointer fp;
+	NodeRecord::FilePointer fp;
 	fp.setCharArray(strArray, size);
 	if (!fileCheck(&fp))return false;
 	searchVersion(&fp);
