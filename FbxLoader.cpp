@@ -420,7 +420,7 @@ void FbxLoader::readFBX(FilePointer* fp) {
 	}
 }
 
-bool FbxLoader::Decompress(NodeRecord *node, unsigned char **output, unsigned int *outSize, unsigned int typeSize) {
+bool FbxLoader::Decompress(NodeRecord* node, unsigned char** output, unsigned int* outSize, unsigned int typeSize) {
 	//型1byte, 配列数4byte, 圧縮有無4byte, サイズ4byte, メタdata2byte 計15byte後data
 	unsigned int comp = convertUCHARtoUINT(&node->Property[5]);//圧縮有無
 	unsigned int meta = 0;
@@ -430,11 +430,13 @@ bool FbxLoader::Decompress(NodeRecord *node, unsigned char **output, unsigned in
 	*outSize = convertUCHARtoUINT(&node->Property[1]);
 	*output = new unsigned char[(*outSize) * typeSize];
 	if (comp == 1) {
-		unsigned char *propertyData = new unsigned char[inSize];
+		unsigned char* propertyData = new unsigned char[inSize];
 		memcpy(propertyData, &node->Property[15], inSize);
 		DecompressDeflate dd;
-		dd.getDecompressArray(propertyData, inSize, *output);//解凍
-		a_DELETE(propertyData);
+		char err[256] = {};
+		bool result = dd.getDecompressArray(propertyData, inSize, *output, err);//解凍
+		aDELETE(propertyData);
+		if (!result)return false;
 	}
 	else {
 		memcpy(*output, &node->Property[13], (*outSize) * typeSize);//解凍無しの場合メタdata2byte無し
