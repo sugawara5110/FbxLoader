@@ -1077,7 +1077,19 @@ void FbxLoader::getMesh() {
 	createRootDeformer(rootNode, Mesh);
 
 	for (unsigned int i = 0; i < NumMesh; i++) {
+
+		const char* ByPolygonVertex = "ByPolygonVertex";
+		int byLen = (int)strlen(ByPolygonVertex);
 		//Normals®—ñ
+		if (Mesh[i].NumNormalsObj <= 0) {
+			Mesh[i].NumNormalsObj = 1;
+			Mesh[i].Normals[0] = new LayerElement();
+			LayerElement* nor = Mesh[i].Normals[0];
+			nor->MappingInformationType = new char[byLen + 1];
+			memcpy(nor->MappingInformationType, ByPolygonVertex, byLen);
+			nor->MappingInformationType[byLen] = '\0';
+			continue;
+		}
 		for (int i1 = 0; i1 < Mesh[i].NumNormalsObj; i1++) {
 			LayerElement* nor = Mesh[i].Normals[i1];
 			if (nor == nullptr)continue;
@@ -1102,10 +1114,14 @@ void FbxLoader::getMesh() {
 			Mesh[i].UV = new LayerElement * [1];
 			Mesh[i].NumUVObj = 1;
 			Mesh[i].UV[0] = new LayerElement();
-			Mesh[i].UV[0]->AlignedUV = new double[Mesh[i].NumPolygonVertices * 2];
+			LayerElement* uv = Mesh[i].UV[0];
+			uv->AlignedUV = new double[Mesh[i].NumPolygonVertices * 2];
 			for (unsigned int i2 = 0; i2 < Mesh[i].NumPolygonVertices * 2; i2++) {
-				Mesh[i].UV[0]->AlignedUV[i2] = 0.0;
+				uv->AlignedUV[i2] = 0.0;
 			}
+			uv->MappingInformationType = new char[byLen + 1];
+			memcpy(uv->MappingInformationType, ByPolygonVertex, byLen);
+			uv->MappingInformationType[byLen] = '\0';
 			continue;
 		}
 		for (int i1 = 0; i1 < Mesh[i].NumUVObj; i1++) {
