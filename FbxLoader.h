@@ -91,7 +91,7 @@ private:
 	//の順で並んでる
 
 	textureType texType = {};
-	char* nodeName[NUMNODENAME] = { nullptr };
+	char* nodeName[NUMNODENAME] = {};
 	unsigned int NumChildren = 0;
 	NodeRecord* nodeChildren = nullptr;//{}内のノード, NodeRecord実体配列用
 
@@ -101,6 +101,7 @@ private:
 	void searchName_Type(std::vector<ConnectionNo>& cn, uint64_t PropertyListLen);
 	void createConnectionList(std::vector<ConnectionList>& cnLi, char* nodeName1);
 	void set(FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector<ConnectionList>& cnLi);
+public:
 	~NodeRecord();
 };
 

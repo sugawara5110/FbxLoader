@@ -9,8 +9,12 @@
 
 #include <stdint.h>
 
-#define sDELETE(p) if(p){delete p;      p=nullptr;}
-#define aDELETE(p) if(p){delete[] p;    p=nullptr;}
+namespace FbxLoaderUtil {
+	template<typename TYPE>
+	void sDELETE(TYPE p) { if (p) { delete p;    p = nullptr; } }
+	template<typename TYPE>
+	void aDELETE(TYPE p) { if (p) { delete[] p;    p = nullptr; } }
+}
 
 class FbxLoader;
 class FbxMeshNode;
@@ -49,22 +53,8 @@ private:
 	unsigned int NumUVindex = 0;
 	int* UVindex = nullptr;
 	double* AlignedUV = nullptr;
-
-	~LayerElement() {
-		aDELETE(MappingInformationType);
-		aDELETE(ReferenceInformationType);
-		aDELETE(name);
-
-		aDELETE(materials);
-
-		aDELETE(normals);
-		aDELETE(NormalsIndex);
-		aDELETE(AlignedNormals);
-
-		aDELETE(UV);
-		aDELETE(UVindex);
-		aDELETE(AlignedUV);
-	}
+public:
+	~LayerElement();
 };
 
 class AnimationCurve {
@@ -76,15 +66,14 @@ private:
 	double Default = 0.0;
 	bool def = false;
 	int64_t* KeyTime = nullptr;
+	int64_t maxKeyTime = 0;
 	float* KeyValueFloat = nullptr;
 	double nullret = 0.0;
 
-	~AnimationCurve() {
-		aDELETE(KeyTime);
-		aDELETE(KeyValueFloat);
-	}
 	void KeyValueFloatOffset(double offset);
 	double getKeyValue(int64_t time);
+public:
+	~AnimationCurve();
 };
 
 struct Lcl {
@@ -114,7 +103,7 @@ private:
 	double TransformLinkMatrix[16] = {};//初期姿勢行列(絶対位置)
 	double LocalPose[16] = {};
 	double GlobalPose[16] = {};
-	static int numAnimation;
+	int NumAnimation = 0;
 
 	Lcl lcl = {};
 
@@ -135,22 +124,8 @@ private:
 	double* SubEvaluateGlobalTransform(int64_t time, int animationIndex);
 
 public:
-	Deformer() {
-		Translation = new AnimationCurve[numAnimation * 3];
-		Rotation = new AnimationCurve[numAnimation * 3];
-		Scaling = new AnimationCurve[numAnimation * 3];
-		for (int i = 0; i < numAnimation * 3; i++)
-			Scaling[i].nullret = 1.0;
-	}
-	~Deformer() {
-		aDELETE(Translation);
-		aDELETE(Rotation);
-		aDELETE(Scaling);
-		aDELETE(name);
-		aDELETE(Indices);
-		aDELETE(Weights);
-		for (int i = 0; i < 100; i++)aDELETE(childName[i]);
-	}
+	void create(int numAnimation);
+	~Deformer();
 	char* getName();
 	int getIndicesCount();
 	int* getIndices();
@@ -159,6 +134,8 @@ public:
 	double* getTransformLinkMatrixDirect() { return TransformLinkMatrix; }
 	int64_t getTimeFRAMES60(int frame);
 	int64_t getTimeFRAMES30(int frame);
+	int32_t getMaxFRAMES60(int animationIndex = 0);
+	int32_t getMaxFRAMES30(int animationIndex = 0);
 	void EvaluateLocalTransform(int64_t time, int animationIndex = 0);
 	void EvaluateGlobalTransform(int64_t time, int animationIndex = 0);
 	double getEvaluateLocalTransform(unsigned int y, unsigned int x);
@@ -179,11 +156,8 @@ private:
 	char* name = nullptr;
 	textureType type = {};
 	char* UVname = nullptr;
-
-	~TextureName() {
-		aDELETE(name);
-		aDELETE(UVname);
-	}
+public:
+	~TextureName();
 };
 
 class FbxMaterialNode {
@@ -202,9 +176,7 @@ private:
 	TextureName textureNorName[numTex] = {};
 
 public:
-	~FbxMaterialNode() {
-		aDELETE(MaterialName);
-	}
+	~FbxMaterialNode();
 };
 
 class FbxMeshNode {
@@ -221,9 +193,9 @@ private:
 	const static int NumLayerElement = 10;
 	int NumMaterial = 0;//マテリアル数
 	FbxMaterialNode** material = nullptr;
-	LayerElement* Material[NumLayerElement] = { nullptr };//ポリゴン毎の使用マテリアル番号配列
+	LayerElement* Material[NumLayerElement] = {};//ポリゴン毎の使用マテリアル番号配列
 	int NumNormalsObj = 0;
-	LayerElement* Normals[NumLayerElement] = { nullptr };
+	LayerElement* Normals[NumLayerElement] = {};
 	int NumUVObj = 0;
 	LayerElement** UV = nullptr;
 	unsigned int NumDeformer = 0;

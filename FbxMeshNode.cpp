@@ -8,6 +8,29 @@
 #include <math.h>
 #include <string.h>
 
+LayerElement::~LayerElement() {
+	using namespace FbxLoaderUtil;
+	aDELETE(MappingInformationType);
+	aDELETE(ReferenceInformationType);
+	aDELETE(name);
+
+	aDELETE(materials);
+
+	aDELETE(normals);
+	aDELETE(NormalsIndex);
+	aDELETE(AlignedNormals);
+
+	aDELETE(UV);
+	aDELETE(UVindex);
+	aDELETE(AlignedUV);
+}
+
+AnimationCurve::~AnimationCurve() {
+	using namespace FbxLoaderUtil;
+	aDELETE(KeyTime);
+	aDELETE(KeyValueFloat);
+}
+
 double AnimationCurve::getKeyValue(int64_t time) {
 	unsigned int ind = 0;
 	int64_t ti = time;
@@ -33,7 +56,25 @@ void AnimationCurve::KeyValueFloatOffset(double offset) {
 	}
 }
 
-int Deformer::numAnimation = 0;
+void Deformer::create(int numAnimation) {
+	NumAnimation = numAnimation;
+	Translation = new AnimationCurve[numAnimation * 3];
+	Rotation = new AnimationCurve[numAnimation * 3];
+	Scaling = new AnimationCurve[numAnimation * 3];
+	for (int i = 0; i < numAnimation * 3; i++)
+		Scaling[i].nullret = 1.0;
+}
+
+Deformer::~Deformer() {
+	using namespace FbxLoaderUtil;
+	aDELETE(Translation);
+	aDELETE(Rotation);
+	aDELETE(Scaling);
+	aDELETE(name);
+	aDELETE(Indices);
+	aDELETE(Weights);
+	for (int i = 0; i < 100; i++)aDELETE(childName[i]);
+}
 
 void Deformer::MatrixScaling(double mat[16], double sx, double sy, double sz) {
 	mat[0] = sx; mat[1] = 0.0; mat[2] = 0.0; mat[3] = 0.0;
@@ -174,6 +215,16 @@ int64_t Deformer::getTimeFRAMES30(int frame) {
 	return frame * 1539538600ll;
 }
 
+int32_t Deformer::getMaxFRAMES60(int animationIndex) {
+	int index = animationIndex * 3;
+	return (int32_t)(Scaling[0 + index].maxKeyTime / 769769300ll);
+}
+
+int32_t Deformer::getMaxFRAMES30(int animationIndex) {
+	int index = animationIndex * 3;
+	return (int32_t)(Scaling[0 + index].maxKeyTime / 1539538600ll);
+}
+
 void Deformer::EvaluateLocalTransform(int64_t time, int animationIndex) {
 	int index = animationIndex * 3;
 	double sca[16] = {};
@@ -211,7 +262,7 @@ void Deformer::rotationOffset() {
 	for (int i = 0; i < 3; i++) {
 		offset[i] += lcl.RotationOffset[i] + parentNode->lcl.Translation[i];
 	}
-	for (int i = 0; i < numAnimation; i++) {
+	for (int i = 0; i < NumAnimation; i++) {
 		AnimationCurve* T = &Translation[i * 3];
 		T[0].KeyValueFloatOffset(offset[0]);
 		T[1].KeyValueFloatOffset(offset[1]);
@@ -243,7 +294,19 @@ double Deformer::getEvaluateGlobalTransform(unsigned int y, unsigned int x) {
 	return GlobalPose[y * 4 + x];
 }
 
+TextureName::~TextureName() {
+	using namespace FbxLoaderUtil;
+	aDELETE(name);
+	aDELETE(UVname);
+}
+
+FbxMaterialNode::~FbxMaterialNode() {
+	using namespace FbxLoaderUtil;
+	aDELETE(MaterialName);
+}
+
 FbxMeshNode::~FbxMeshNode() {
+	using namespace FbxLoaderUtil;
 	aDELETE(name);
 	aDELETE(vertices);
 	aDELETE(polygonVertices);

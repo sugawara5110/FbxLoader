@@ -278,6 +278,7 @@ void NodeRecord::set(FilePointer* fp, std::vector<ConnectionNo>& cn, std::vector
 }
 
 NodeRecord::~NodeRecord() {
+	using namespace FbxLoaderUtil;
 	aDELETE(className);
 	aDELETE(Property);
 	for (int i = 0; i < NUMNODENAME; i++) {
@@ -348,8 +349,7 @@ void FbxLoader::readFBX(NodeRecord::FilePointer* fp) {
 					for (unsigned int i2 = 0; i2 < n2->NumChildren; i2++) {
 						NodeRecord* n3 = &n2->nodeChildren[i2];
 						if (!strcmp(n3->className, "Count")) {
-							Deformer::numAnimation = convertUCHARtoINT32(&n3->Property[1]);
-							numAnimation = Deformer::numAnimation;
+							numAnimation = convertUCHARtoINT32(&n3->Property[1]);
 						}
 					}
 				}
@@ -424,6 +424,7 @@ void FbxLoader::readFBX(NodeRecord::FilePointer* fp) {
 
 bool FbxLoader::Decompress(NodeRecord* node, unsigned char** output, unsigned int* outSize, unsigned int typeSize) {
 	//型1byte, 配列数4byte, 圧縮有無4byte, サイズ4byte, メタdata2byte 計15byte後data
+	using namespace FbxLoaderUtil;
 	unsigned int comp = convertUCHARtoUINT(&node->Property[5]);//圧縮有無
 	unsigned int meta = 0;
 	if (comp == 1)meta = 2;
@@ -448,6 +449,7 @@ bool FbxLoader::Decompress(NodeRecord* node, unsigned char** output, unsigned in
 
 void FbxLoader::getLayerElementSub(NodeRecord* node, LayerElement* le) {
 
+	using namespace FbxLoaderUtil;
 	for (unsigned int i = 0; i < node->NumChildren; i++) {
 		NodeRecord* n1 = &node->nodeChildren[i];
 
@@ -619,10 +621,13 @@ void FbxLoader::setParentPointerOfSubDeformer(FbxMeshNode* mesh) {
 }
 
 void FbxLoader::getSubDeformer(NodeRecord* node, FbxMeshNode* mesh) {
+
+	using namespace FbxLoaderUtil;
 	//各Deformer情報取得
 	if (!strcmp(node->className, "Deformer")) {
 		mesh->deformer[mesh->NumDeformer] = new Deformer();
 		Deformer* defo = mesh->deformer[mesh->NumDeformer];
+		defo->create(numAnimation);
 
 		for (unsigned int i = 0; i < node->connectionNode.size(); i++) {
 			NodeRecord* n1 = node->connectionNode[i];
@@ -709,6 +714,8 @@ void FbxLoader::getDeformer(NodeRecord* node, FbxMeshNode* mesh) {
 }
 
 void FbxLoader::getGeometry(NodeRecord* node, FbxMeshNode* mesh) {
+
+	using namespace FbxLoaderUtil;
 	if (!strcmp(node->className, "Geometry")) {
 		int len = (int)strlen(node->nodeName[0]);
 		mesh->name = new char[len + 1];
@@ -1026,6 +1033,7 @@ void FbxLoader::createRootDeformer(NodeRecord* n, FbxMeshNode* meshArr) {
 					if (mesh.NumDeformer > 0) {
 						mesh.rootDeformer = new Deformer();
 						Deformer* defo = mesh.rootDeformer;
+						defo->create(numAnimation);
 						getLcl(n1, defo->lcl);
 						int len = (int)strlen(n1->nodeName[0]);
 						defo->name = new char[len + 1];
@@ -1203,6 +1211,7 @@ void FbxLoader::getNoneMeshSubDeformer(NodeRecord* node) {
 		deformer[NumDeformer] = new Deformer();
 		getLcl(node, deformer[NumDeformer]->lcl);
 		Deformer* defo = deformer[NumDeformer];
+		defo->create(numAnimation);
 		NumDeformer++;
 		int len = (int)strlen(node->nodeName[0]);
 		defo->name = new char[len + 1];
@@ -1227,6 +1236,7 @@ void FbxLoader::GetNoneMeshDeformer() {
 		if (!strcmp(n1->className, "Model") && n1->nodeName[1]) {
 			if (!strcmp(n1->nodeName[1], "Root") || !strcmp(n1->nodeName[1], "Limb") || !strcmp(n1->nodeName[1], "Null")) {
 				rootDeformer = new Deformer();
+				rootDeformer->create(numAnimation);
 				getLcl(n1, rootDeformer->lcl);
 				int len = (int)strlen(n1->nodeName[0]);
 				rootDeformer->name = new char[len + 1];
@@ -1310,6 +1320,8 @@ void FbxLoader::checkProperties(NodeRecord* pro70Child, bool* check, char* pName
 }
 
 void FbxLoader::getAnimationCurve(unsigned int& animInd, NodeRecord* animNode, AnimationCurve* anim, char* Lcl) {
+
+	using namespace FbxLoaderUtil;
 	if (!strcmp(animNode->className, "AnimationCurveNode") &&
 		!strcmp(animNode->nodeName[0], Lcl)) {
 		for (unsigned int i = 0; i < animNode->connectionNode.size(); i++) {
@@ -1329,6 +1341,7 @@ void FbxLoader::getAnimationCurve(unsigned int& animInd, NodeRecord* animNode, A
 							anim[animInd].NumKey = outSize;
 							anim[animInd].KeyTime = new int64_t[outSize];
 							ConvertUCHARtoint64_t(output, anim[animInd].KeyTime, outSize);
+							anim[animInd].maxKeyTime = anim[animInd].KeyTime[outSize - 1];
 						}
 						aDELETE(output);
 					}
@@ -1432,6 +1445,7 @@ void FbxLoader::drawname(NodeRecord* node, bool cnNode) {
 }
 
 FbxLoader::~FbxLoader() {
+	using namespace FbxLoaderUtil;
 	aDELETE(Mesh);
 	sDELETE(singleMesh);
 	std::vector<ConnectionNo>().swap(cnNo);//解放
@@ -1513,6 +1527,8 @@ void FbxLoader::drawNode() {
 }
 
 void FbxLoader::createFbxSingleMeshNode() {
+
+	using namespace FbxLoaderUtil;
 	singleMesh = new FbxMeshNode();
 	int maxNumMaterial = 0;
 	for (unsigned int i = 0; i < NumMesh; i++) {
