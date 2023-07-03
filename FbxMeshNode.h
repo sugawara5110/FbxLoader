@@ -165,9 +165,22 @@ class FbxMaterialNode {
 private:
 	friend FbxMeshNode;
 	friend FbxLoader;
-	double Diffuse[3] = {};
-	double Specular[3] = {};
-	double Ambient[3] = {};
+	double DiffuseColor[3] = {};
+	double SpecularColor[3] = {};
+	double AmbientColor[3] = {};
+
+	double DiffuseFactor = 1.0;
+	double SpecularFactor = 1.0;
+	double AmbientFactor = 1.0;
+
+	double TransparentColor[3] = {};
+	double TransparencyFactor = 1.0;
+	double Opacity = 0.0;
+	double ShininessExponent = 0.0;
+	double Shininess = 0.0;
+
+	double NormalMap[3] = {};
+
 	char* MaterialName = nullptr;
 	const static int numTex = 10;
 	int NumDifTexture = 0;
@@ -232,6 +245,18 @@ public:
 	double getDiffuseColor(unsigned int Index, unsigned int ColIndex);
 	double getSpecularColor(unsigned int Index, unsigned int ColIndex);
 	double getAmbientColor(unsigned int Index, unsigned int ColIndex);
+
+	double getDiffuseFactor(unsigned int Index);
+	double getSpecularFactor(unsigned int Index);
+	double getAmbientFactor(unsigned int Index);
+
+	double getTransparentColor(unsigned int Index, unsigned int ColIndex);
+	double getTransparencyFactor(unsigned int Index);
+	double getOpacity(unsigned int Index);
+	double getShininessExponent(unsigned int Index);
+	double getShininess(unsigned int Index);
+
+	double getNormalMap(unsigned int Index, unsigned int ColIndex);
 
 	char* getMaterialMappingInformationType(unsigned int layerIndex = 0);
 	char* getMaterialReferenceInformationType(unsigned int layerIndex = 0);

@@ -170,7 +170,7 @@ private:
 	void getNoneMeshDeformerCounter();
 	void getNoneMeshSubDeformer(NodeRecord* node);
 	void GetNoneMeshDeformer();
-	void getCol(NodeRecord* pro70Child, double Col[3], char* ColStr);
+	void getCol(NodeRecord* pro70Child, double* Col, unsigned int numCol, char* ColStr);
 	void getAnimationCurve(unsigned int& animInd, NodeRecord* animNode, AnimationCurve* anim, char* Lcl);
 	void getAnimation(NodeRecord* model, Deformer* defo);
 	void ConvertUCHARtoDouble(unsigned char* arr, double* outArr, unsigned int outsize);

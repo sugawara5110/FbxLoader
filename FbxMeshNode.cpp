@@ -405,17 +405,62 @@ char* FbxMeshNode::getNormalTextureUVName(unsigned int Index, unsigned int texNo
 
 double FbxMeshNode::getDiffuseColor(unsigned int Index, unsigned int ColIndex) {
 	if (!material[Index])return 0.0f;
-	return material[Index]->Diffuse[ColIndex];
+	return material[Index]->DiffuseColor[ColIndex];
 }
 
 double FbxMeshNode::getSpecularColor(unsigned int Index, unsigned int ColIndex) {
 	if (!material[Index])return 0.0f;
-	return material[Index]->Specular[ColIndex];
+	return material[Index]->SpecularColor[ColIndex];
 }
 
 double FbxMeshNode::getAmbientColor(unsigned int Index, unsigned int ColIndex) {
 	if (!material[Index])return 0.0f;
-	return material[Index]->Ambient[ColIndex];
+	return material[Index]->AmbientColor[ColIndex];
+}
+
+double FbxMeshNode::getDiffuseFactor(unsigned int Index) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->DiffuseFactor;
+}
+
+double FbxMeshNode::getSpecularFactor(unsigned int Index) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->SpecularFactor;
+}
+
+double FbxMeshNode::getAmbientFactor(unsigned int Index) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->AmbientFactor;
+}
+
+double FbxMeshNode::getTransparentColor(unsigned int Index, unsigned int ColIndex) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->TransparentColor[ColIndex];
+}
+
+double FbxMeshNode::getTransparencyFactor(unsigned int Index) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->TransparencyFactor;
+}
+
+double FbxMeshNode::getOpacity(unsigned int Index) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->Opacity;
+}
+
+double FbxMeshNode::getShininessExponent(unsigned int Index) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->ShininessExponent;
+}
+
+double FbxMeshNode::getShininess(unsigned int Index) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->Shininess;
+}
+
+double FbxMeshNode::getNormalMap(unsigned int Index, unsigned int ColIndex) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->NormalMap[ColIndex];
 }
 
 char* FbxMeshNode::getMaterialMappingInformationType(unsigned int layerIndex) {

@@ -787,9 +787,23 @@ void FbxLoader::getMaterial(NodeRecord* node, FbxMeshNode* mesh, unsigned int* m
 			if (!strcmp(node->nodeChildren[i].className, "Properties70")) {
 				NodeRecord* pro70 = &node->nodeChildren[i];
 				for (unsigned int i1 = 0; i1 < pro70->NumChildren; i1++) {
-					getCol(&pro70->nodeChildren[i1], mesh->material[*materialIndex]->Diffuse, "DiffuseColor");
-					getCol(&pro70->nodeChildren[i1], mesh->material[*materialIndex]->Specular, "SpecularColor");
-					getCol(&pro70->nodeChildren[i1], mesh->material[*materialIndex]->Ambient, "AmbientColor");
+					NodeRecord* child = &pro70->nodeChildren[i1];
+					FbxMaterialNode* mat = mesh->material[*materialIndex];
+					getCol(child, mat->DiffuseColor, 3, "DiffuseColor");
+					getCol(child, mat->SpecularColor, 3, "SpecularColor");
+					getCol(child, mat->AmbientColor, 3, "AmbientColor");
+
+					getCol(child, &mat->DiffuseFactor, 1, "DiffuseFactor");
+					getCol(child, &mat->SpecularFactor, 1, "SpecularFactor");
+					getCol(child, &mat->AmbientFactor, 1, "AmbientFactor");
+
+					getCol(child, mat->TransparentColor, 3, "TransparentColor");
+					getCol(child, &mat->TransparencyFactor, 1, "TransparencyFactor");
+					getCol(child, &mat->Opacity, 1, "Opacity");
+					getCol(child, &mat->ShininessExponent, 1, "ShininessExponent");
+					getCol(child, &mat->Shininess, 1, "Shininess");
+
+					getCol(child, mat->NormalMap, 3, "NormalMap");
 				}
 			}
 		}
@@ -1260,7 +1274,7 @@ void FbxLoader::GetNoneMeshDeformer() {
 	setParentPointerOfNoneMeshSubDeformer();
 }
 
-void FbxLoader::getCol(NodeRecord *pro70Child, double Col[3], char *ColStr) {
+void FbxLoader::getCol(NodeRecord* pro70Child, double* Col, unsigned int numCol, char* ColStr) {
 	if (!strcmp(pro70Child->className, "P") &&
 		!strcmp(pro70Child->nodeName[0], ColStr)) {
 		unsigned int proInd = 1;
@@ -1268,7 +1282,7 @@ void FbxLoader::getCol(NodeRecord *pro70Child, double Col[3], char *ColStr) {
 			proInd += convertUCHARtoUINT(&pro70Child->Property[proInd]) + 1 + 4;
 			int k = 0;
 		}
-		for (unsigned int i = 0; i < 3; i++) {
+		for (unsigned int i = 0; i < numCol; i++) {
 			ConvertUCHARtoDouble(&pro70Child->Property[proInd], &Col[i], 1);
 			proInd += 9;
 			int f = 0;
