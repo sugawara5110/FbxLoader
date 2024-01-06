@@ -11,9 +11,9 @@
 
 namespace FbxLoaderUtil {
 	template<typename TYPE>
-	void sDELETE(TYPE p) { if (p) { delete p;    p = nullptr; } }
+	void sDELETE(TYPE& p) { if (p) { delete p;    p = nullptr; } }
 	template<typename TYPE>
-	void aDELETE(TYPE p) { if (p) { delete[] p;    p = nullptr; } }
+	void aDELETE(TYPE& p) { if (p) { delete[] p;    p = nullptr; } }
 }
 
 class FbxLoader;
