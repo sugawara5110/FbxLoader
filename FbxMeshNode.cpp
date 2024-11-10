@@ -463,6 +463,41 @@ double FbxMeshNode::getNormalMap(unsigned int Index, unsigned int ColIndex) {
 	return material[Index]->NormalMap[ColIndex];
 }
 
+double FbxMeshNode::getReflectionColor(unsigned int Index, unsigned int ColIndex) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->ReflectionColor[ColIndex];
+}
+
+double FbxMeshNode::getReflectionFactor(unsigned int Index) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->ReflectionFactor;
+}
+
+double FbxMeshNode::getEmissiveColor(unsigned int Index, unsigned int ColIndex) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->EmissiveColor[ColIndex];
+}
+
+double FbxMeshNode::getEmissiveFactor(unsigned int Index) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->EmissiveFactor;
+}
+
+double FbxMeshNode::getDisplacementColor(unsigned int Index, unsigned int ColIndex) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->DisplacementColor[ColIndex];
+}
+
+double FbxMeshNode::getDisplacementFactor(unsigned int Index) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->DisplacementFactor;
+}
+
+double FbxMeshNode::getBump(unsigned int Index, unsigned int ColIndex) {
+	if (!material[Index])return 0.0f;
+	return material[Index]->Bump[ColIndex];
+}
+
 char* FbxMeshNode::getMaterialMappingInformationType(unsigned int layerIndex) {
 	if (!Material[layerIndex])return nullptr;
 	return Material[layerIndex]->MappingInformationType;

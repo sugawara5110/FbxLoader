@@ -23,11 +23,25 @@ class FbxMaterialNode;
 
 class textureType {
 public:
-	bool NormalMap = false;
+	bool EmissiveColor = false;
+	bool EmissiveFactor = false;
 	bool DiffuseColor = false;
+	bool DiffuseFactor = false;
 	bool SpecularColor = false;
 	bool SpecularFactor = false;
-	bool EmissiveFactor = false;
+	bool NormalMap = false;
+	bool AmbientColor = false;
+	bool AmbientFactor = false;
+	bool TransparentColor = false;
+	bool TransparencyFactor = false;
+	bool Opacity = false;
+	bool ShininessExponent = false;
+	bool Shininess = false;
+	bool ReflectionColor = false;
+	bool ReflectionFactor = false;
+	bool DisplacementColor = false;
+	bool DisplacementFactor = false;
+	bool Bump = false;
 };
 
 class LayerElement {
@@ -181,6 +195,15 @@ private:
 
 	double NormalMap[3] = {};
 
+	double ReflectionColor[3] = {};
+	double ReflectionFactor = 1.0f;
+	double EmissiveColor[3] = {};
+	double EmissiveFactor = 1.0f;
+
+	double DisplacementColor[3] = {};
+	double DisplacementFactor = 1.0f;
+	double Bump[3] = {};
+
 	char* MaterialName = nullptr;
 	const static int numTex = 10;
 	int NumDifTexture = 0;
@@ -257,6 +280,15 @@ public:
 	double getShininess(unsigned int Index);
 
 	double getNormalMap(unsigned int Index, unsigned int ColIndex);
+
+	double getReflectionColor(unsigned int Index, unsigned int ColIndex);
+	double getReflectionFactor(unsigned int Index);
+	double getEmissiveColor(unsigned int Index, unsigned int ColIndex);
+	double getEmissiveFactor(unsigned int Index);
+
+	double getDisplacementColor(unsigned int Index, unsigned int ColIndex);
+	double getDisplacementFactor(unsigned int Index);
+	double getBump(unsigned int Index, unsigned int ColIndex);
 
 	char* getMaterialMappingInformationType(unsigned int layerIndex = 0);
 	char* getMaterialReferenceInformationType(unsigned int layerIndex = 0);

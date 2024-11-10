@@ -224,9 +224,23 @@ void NodeRecord::createConnectionList(std::vector<ConnectionList>& cnLi, char* n
 	if (nodeName1) {
 		if (!strcmp("NormalMap", nodeName1))cl.texType.NormalMap = true;
 		if (!strcmp("DiffuseColor", nodeName1))cl.texType.DiffuseColor = true;
+		if (!strcmp("DiffuseFactor", nodeName1))cl.texType.DiffuseFactor = true;
 		if (!strcmp("SpecularColor", nodeName1))cl.texType.SpecularColor = true;
 		if (!strcmp("SpecularFactor", nodeName1))cl.texType.SpecularFactor = true;
+		if (!strcmp("EmissiveColor", nodeName1))cl.texType.EmissiveColor = true;
 		if (!strcmp("EmissiveFactor", nodeName1))cl.texType.EmissiveFactor = true;
+		if (!strcmp("AmbientColor", nodeName1))cl.texType.AmbientColor = true;
+		if (!strcmp("AmbientFactor", nodeName1))cl.texType.AmbientFactor = true;
+		if (!strcmp("TransparentColor", nodeName1))cl.texType.TransparentColor = true;
+		if (!strcmp("TransparencyFactor", nodeName1))cl.texType.TransparencyFactor = true;
+		if (!strcmp("Opacity", nodeName1))cl.texType.Opacity = true;
+		if (!strcmp("ShininessExponent ", nodeName1))cl.texType.ShininessExponent = true;
+		if (!strcmp("Shininess", nodeName1))cl.texType.Shininess = true;
+		if (!strcmp("ReflectionColor", nodeName1))cl.texType.ReflectionColor = true;
+		if (!strcmp("ReflectionFactor", nodeName1))cl.texType.ReflectionFactor = true;
+		if (!strcmp("DisplacementColor", nodeName1))cl.texType.DisplacementColor = true;
+		if (!strcmp("DisplacementFactor", nodeName1))cl.texType.DisplacementFactor = true;
+		if (!strcmp("Bump", nodeName1))cl.texType.Bump = true;
 	}
 	cnLi.push_back(cl);
 }
@@ -391,11 +405,7 @@ void FbxLoader::readFBX(NodeRecord::FilePointer* fp) {
 						//子ノードポインタ抽出
 						NodeRecord* childP = cnNo[j1].ConnectionIDPointer;
 						//テクスチャType登録
-						if (cnLi[i].texType.NormalMap)childP->texType.NormalMap = true;
-						if (cnLi[i].texType.DiffuseColor)childP->texType.DiffuseColor = true;
-						if (cnLi[i].texType.SpecularColor)childP->texType.SpecularColor = true;
-						if (cnLi[i].texType.SpecularFactor)childP->texType.SpecularFactor = true;
-						if (cnLi[i].texType.EmissiveFactor)childP->texType.EmissiveFactor = true;
+						childP->texType = cnLi[i].texType;
 						//親ノードポインタから親ノードへアクセス
 						NodeRecord* cp = cnNo[j].ConnectionIDPointer;
 						//既に登録済みでないかチェック
@@ -804,6 +814,15 @@ void FbxLoader::getMaterial(NodeRecord* node, FbxMeshNode* mesh, unsigned int* m
 					getCol(child, &mat->Shininess, 1, "Shininess");
 
 					getCol(child, mat->NormalMap, 3, "NormalMap");
+
+					getCol(child, mat->ReflectionColor, 3, "ReflectionColor");
+					getCol(child, &mat->ReflectionFactor, 1, "ReflectionFactor");
+					getCol(child, mat->EmissiveColor, 3, "EmissiveColor");
+					getCol(child, &mat->EmissiveFactor, 1, "EmissiveFactor");
+
+					getCol(child, mat->DisplacementColor, 3, "DisplacementColor");
+					getCol(child, &mat->DisplacementFactor, 1, "DisplacementFactor");
+					getCol(child, mat->Bump, 3, "Bump");
 				}
 			}
 		}
