@@ -44,7 +44,7 @@ private:
 	public:
 		~FilePointer();
 		bool versionSw = false;
-		bool setFile(char* pass);
+		bool setFile(char* Path);
 		void setCharArray(char* cArray, int size);//FILEégÇÌÇ»Ç¢Ç≈ì«Ç›çûÇﬁéûégóp
 		unsigned int getPos();
 		void seekPointer(unsigned int ind);
@@ -186,7 +186,7 @@ private:
 
 public:
 	~FbxLoader();
-	bool setFbxFile(char* pass);
+	bool setFbxFile(char* Path);
 	bool setBinaryInFbxFile(char* strArray, int size);
 	NodeRecord* getFbxRecord();
 	NodeRecord* getRootNode();

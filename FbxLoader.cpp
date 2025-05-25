@@ -17,8 +17,8 @@ NodeRecord::FilePointer::~FilePointer() {
 	}
 }
 
-bool NodeRecord::FilePointer::setFile(char* pass) {
-	FILE* fp = fopen(pass, "rb");
+bool NodeRecord::FilePointer::setFile(char* Path) {
+	FILE* fp = fopen(Path, "rb");
 	if (fp == NULL) {
 		return false;
 	}
@@ -1489,9 +1489,9 @@ FbxLoader::~FbxLoader() {
 	sDELETE(rootDeformer);
 }
 
-bool FbxLoader::setFbxFile(char* pass) {
+bool FbxLoader::setFbxFile(char* Path) {
 	NodeRecord::FilePointer fp;
-	if (!fp.setFile(pass))return false;
+	if (!fp.setFile(Path))return false;
 	if (!fileCheck(&fp))return false;
 	searchVersion(&fp);
 	readFBX(&fp);
